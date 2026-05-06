@@ -107,6 +107,65 @@ struct CodexOperationalStatusTests {
     }
 
     @Test
+    func reconnectingDoesNotOverrideCompletedCodexAppSessions() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var session = AgentSession(
+            id: "codex-app-completed",
+            title: "Codex · repo",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .completed,
+            summary: "Interrupted",
+            updatedAt: now
+        )
+        session.isCodexAppSession = true
+        session.lastTurnInterrupted = true
+
+        let signals = CodexOperationalStatusSignals(
+            now: now,
+            bridgeConnectionState: .connected,
+            codexAppServerConnectionState: .reconnecting,
+            stalledThreshold: 12 * 60,
+            loopSuspectedEnabled: false,
+            loopRepeatCount: 0,
+            loopSuspectedThreshold: 4,
+            recentCompletionWindow: 20 * 60
+        )
+
+        #expect(session.codexOperationalStatus(signals: signals) == .interrupted)
+    }
+
+    @Test
+    func reconnectingDoesNotOverrideInactiveRunningSessions() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var session = AgentSession(
+            id: "codex-stale-running",
+            title: "Codex · repo",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Old running session",
+            updatedAt: now.addingTimeInterval(-20 * 60)
+        )
+        session.isProcessAlive = true
+
+        let signals = CodexOperationalStatusSignals(
+            now: now,
+            bridgeConnectionState: .reconnecting,
+            codexAppServerConnectionState: .connected,
+            stalledThreshold: 12 * 60,
+            loopSuspectedEnabled: false,
+            loopRepeatCount: 0,
+            loopSuspectedThreshold: 4,
+            recentCompletionWindow: 20 * 60
+        )
+
+        #expect(session.codexOperationalStatus(signals: signals) == .stalled)
+    }
+
+    @Test
     func loopSuspectedRespectsThresholdAndSwitch() {
         let now = Date(timeIntervalSince1970: 20_000)
         var session = AgentSession(

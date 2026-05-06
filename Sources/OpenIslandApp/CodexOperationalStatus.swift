@@ -97,7 +97,7 @@ extension AgentSession {
     ///
     /// Trigger conditions:
     /// - `connecting/reconnecting`: Codex.app app-server or local bridge is in
-    ///   a connecting state while this session is expected to be live.
+    ///   a connecting state while this session is running and recently active.
     /// - `interrupted`: latest completed turn is explicitly marked interrupted.
     /// - `detached`: session exists but terminal/thread attachment is lost.
     /// - `stalled`: running + process alive + no event update for threshold.
@@ -153,23 +153,38 @@ extension AgentSession {
     }
 
     private func shouldShowConnecting(using signals: CodexOperationalStatusSignals) -> Bool {
+        guard isActiveRunningSessionForConnectionSignal(using: signals) else {
+            return false
+        }
+
         if isCodexAppSession && tool == .codex {
             return signals.codexAppServerConnectionState == .connecting
         }
 
         return isTrackedLiveSession
             && signals.bridgeConnectionState == .connecting
-            && phase == .running
     }
 
     private func shouldShowReconnecting(using signals: CodexOperationalStatusSignals) -> Bool {
+        guard isActiveRunningSessionForConnectionSignal(using: signals) else {
+            return false
+        }
+
         if isCodexAppSession && tool == .codex {
             return signals.codexAppServerConnectionState == .reconnecting
         }
 
         return isTrackedLiveSession
             && signals.bridgeConnectionState == .reconnecting
-            && phase == .running
+    }
+
+    private func isActiveRunningSessionForConnectionSignal(using signals: CodexOperationalStatusSignals) -> Bool {
+        guard phase == .running else {
+            return false
+        }
+
+        let inactiveAge = max(0, signals.now.timeIntervalSince(updatedAt))
+        return inactiveAge < signals.stalledThreshold
     }
 
     private var isDetachedFromRuntime: Bool {
