@@ -522,6 +522,9 @@ struct IslandPanelView: View {
             } else if model.islandListSessions.isEmpty {
                 emptyState
             } else {
+                if !model.codexShelfProjects.isEmpty {
+                    codexShelfPanel
+                }
                 if !model.codexRadarProjects.isEmpty {
                     codexRadarPanel
                 }
@@ -737,6 +740,111 @@ struct IslandPanelView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
+    }
+
+    private var codexShelfPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("Artifact Shelf")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+
+                Spacer(minLength: 8)
+
+                Text("\(model.codexShelfItems.count) files")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+
+            VStack(spacing: 6) {
+                ForEach(Array(model.codexShelfProjects.prefix(3)), id: \.id) { project in
+                    shelfProjectRow(project)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    private func shelfProjectRow(_ project: AppModel.CodexShelfProject) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
+                Text(project.projectName)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text("\(project.itemCount) file\(project.itemCount == 1 ? "" : "s")")
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+
+            VStack(spacing: 4) {
+                ForEach(Array(project.items.prefix(3)), id: \.id) { item in
+                    shelfItemRow(item)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.white.opacity(0.03))
+        )
+    }
+
+    private func shelfItemRow(_ item: CodexShelfItem) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: item.artifactType.symbolName)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.68))
+                .frame(width: 14)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.fileName)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.86))
+                    .lineLimit(1)
+                Text("\(item.artifactType.label) · \(radarAgeLabel(item.modifiedAt))")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.46))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 6)
+
+            Button {
+                model.openShelfItem(item)
+            } label: {
+                Image(systemName: "arrow.up.right.square")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .frame(width: 18, height: 18)
+                    .background(Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                model.revealShelfItemInFinder(item)
+            } label: {
+                Image(systemName: "folder")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .frame(width: 18, height: 18)
+                    .background(Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private func radarProjectRow(_ project: AppModel.CodexRadarProject) -> some View {

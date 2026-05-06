@@ -886,6 +886,108 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func codexShelfTracksExistingArtifactsFromRelativePaths() throws {
+        let now = Date(timeIntervalSince1970: 3_900)
+        let model = AppModel()
+        let fileManager = FileManager.default
+
+        let workspaceURL = fileManager.temporaryDirectory
+            .appendingPathComponent("open-island-shelf-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: workspaceURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: workspaceURL) }
+
+        let relativePath = "Sources/ShelfFeature.swift"
+        let fileURL = workspaceURL.appendingPathComponent(relativePath)
+        try fileManager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "struct ShelfFeature {}".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var session = AgentSession(
+            id: "codex-shelf-session",
+            title: "Codex · shelf-project",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Working on shelf panel",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Ghostty",
+                workspaceName: "shelf-project",
+                paneTitle: "codex ~/shelf-project",
+                workingDirectory: workspaceURL.path
+            )
+        )
+        session.isProcessAlive = true
+        model.state = SessionState(sessions: [session])
+
+        model.applyTrackedEvent(
+            .activityUpdated(
+                SessionActivityUpdated(
+                    sessionID: session.id,
+                    summary: "Updated \(relativePath).",
+                    phase: .running,
+                    timestamp: now.addingTimeInterval(1)
+                )
+            )
+        )
+
+        let shelfItems = model.codexShelfItems
+        #expect(shelfItems.count == 1)
+        #expect(shelfItems.first?.fileName == "ShelfFeature.swift")
+        #expect(shelfItems.first?.artifactType == .code)
+        #expect(shelfItems.first?.projectName == "shelf-project")
+        #expect(shelfItems.first?.path == fileURL.standardizedFileURL.path)
+    }
+
+    @Test
+    func codexShelfIgnoresNonCodexSessions() throws {
+        let now = Date(timeIntervalSince1970: 3_950)
+        let model = AppModel()
+        let fileManager = FileManager.default
+
+        let workspaceURL = fileManager.temporaryDirectory
+            .appendingPathComponent("open-island-shelf-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: workspaceURL, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: workspaceURL) }
+
+        let fileURL = workspaceURL.appendingPathComponent("main.swift")
+        try "print(\"hello\")".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var session = AgentSession(
+            id: "claude-shelf-session",
+            title: "Claude · shelf-project",
+            tool: .claudeCode,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Working on docs",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Ghostty",
+                workspaceName: "shelf-project",
+                paneTitle: "claude ~/shelf-project",
+                workingDirectory: workspaceURL.path
+            )
+        )
+        session.isProcessAlive = true
+        model.state = SessionState(sessions: [session])
+
+        model.applyTrackedEvent(
+            .activityUpdated(
+                SessionActivityUpdated(
+                    sessionID: session.id,
+                    summary: "Updated main.swift",
+                    phase: .running,
+                    timestamp: now.addingTimeInterval(1)
+                )
+            )
+        )
+
+        #expect(model.codexShelfItems.isEmpty)
+        #expect(model.codexShelfProjects.isEmpty)
+    }
+
+    @Test
     func codexRadarAggregatesByProjectAndPrioritizesActionableProject() {
         let now = Date(timeIntervalSince1970: 4_000)
         let model = AppModel()

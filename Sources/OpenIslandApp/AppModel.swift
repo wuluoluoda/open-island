@@ -62,6 +62,14 @@ final class AppModel {
         let sessionIDs: [String]
     }
 
+    struct CodexShelfProject: Identifiable, Equatable {
+        let id: String
+        let projectName: String
+        let itemCount: Int
+        let latestModifiedAt: Date
+        let items: [CodexShelfItem]
+    }
+
     private struct LoopSignal: Equatable {
         var fingerprint: String
         var repeatCount: Int
@@ -69,6 +77,7 @@ final class AppModel {
     }
 
     private static let loopSignalRetentionWindow: TimeInterval = 20 * 60
+    private static let codexShelfMaxTrackedItems = 120
 
     let lang = LanguageManager.shared
 
@@ -307,6 +316,7 @@ final class AppModel {
         didSet {
             guard hasFinishedInit, codexShelfEnabled != oldValue else { return }
             UserDefaults.standard.set(codexShelfEnabled, forKey: Self.codexShelfEnabledDefaultsKey)
+            refreshOverlayPlacementIfVisible()
         }
     }
     var codexRadarEnabled: Bool = true {
@@ -544,6 +554,9 @@ final class AppModel {
 
     @ObservationIgnored
     private var loopSignalsBySessionID: [String: LoopSignal] = [:]
+
+    @ObservationIgnored
+    private var codexShelfByPath: [String: CodexShelfItem] = [:]
 
     @ObservationIgnored
     private var hasStarted = false
@@ -819,6 +832,57 @@ final class AppModel {
                 return lhs.updatedAt > rhs.updatedAt
             }
             return lhs.topStatus.priority > rhs.topStatus.priority
+        }
+    }
+
+    var codexShelfItems: [CodexShelfItem] {
+        guard codexShelfEnabled else {
+            return []
+        }
+
+        let existingPaths = codexShelfByPath.values
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+
+        return existingPaths.sorted { lhs, rhs in
+            if lhs.modifiedAt == rhs.modifiedAt {
+                return lhs.fileName.localizedStandardCompare(rhs.fileName) == .orderedAscending
+            }
+            return lhs.modifiedAt > rhs.modifiedAt
+        }
+    }
+
+    var codexShelfProjects: [CodexShelfProject] {
+        let items = codexShelfItems
+        guard !items.isEmpty else {
+            return []
+        }
+
+        let grouped = Dictionary(grouping: items, by: \.projectName)
+        let projects = grouped.compactMap { projectName, groupItems -> CodexShelfProject? in
+            let sortedItems = groupItems.sorted { lhs, rhs in
+                if lhs.modifiedAt == rhs.modifiedAt {
+                    return lhs.fileName.localizedStandardCompare(rhs.fileName) == .orderedAscending
+                }
+                return lhs.modifiedAt > rhs.modifiedAt
+            }
+            guard let newest = sortedItems.first else {
+                return nil
+            }
+
+            return CodexShelfProject(
+                id: projectName.lowercased(),
+                projectName: projectName,
+                itemCount: sortedItems.count,
+                latestModifiedAt: newest.modifiedAt,
+                items: sortedItems
+            )
+        }
+
+        return projects.sorted { lhs, rhs in
+            if lhs.latestModifiedAt == rhs.latestModifiedAt {
+                return lhs.projectName.localizedStandardCompare(rhs.projectName) == .orderedAscending
+            }
+            return lhs.latestModifiedAt > rhs.latestModifiedAt
         }
     }
 
@@ -1204,6 +1268,41 @@ final class AppModel {
         jump(to: jumpTarget)
     }
 
+    func openShelfItem(_ item: CodexShelfItem) {
+        let fileURL = URL(fileURLWithPath: item.path).standardizedFileURL
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            codexShelfByPath.removeValue(forKey: fileURL.path.lowercased())
+            lastActionMessage = "Cannot open \(item.fileName): file no longer exists."
+            return
+        }
+
+        if NSWorkspace.shared.open(fileURL) {
+            lastActionMessage = "Opened \(item.fileName)."
+        } else {
+            lastActionMessage = "Failed to open \(item.fileName)."
+        }
+    }
+
+    func revealShelfItemInFinder(_ item: CodexShelfItem) {
+        let fileURL = URL(fileURLWithPath: item.path).standardizedFileURL
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: fileURL.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+            lastActionMessage = "Revealed \(item.fileName) in Finder."
+            return
+        }
+
+        codexShelfByPath.removeValue(forKey: fileURL.path.lowercased())
+        let directoryURL = fileURL.deletingLastPathComponent()
+        if fileManager.fileExists(atPath: directoryURL.path) {
+            NSWorkspace.shared.open(directoryURL)
+            lastActionMessage = "Opened containing folder for \(item.fileName)."
+            return
+        }
+
+        lastActionMessage = "Cannot reveal \(item.fileName): path no longer exists."
+    }
+
     private func jump(to jumpTarget: JumpTarget?) {
         guard let jumpTarget else {
             lastActionMessage = "No jump target is available yet."
@@ -1385,6 +1484,7 @@ final class AppModel {
         }
 
         state.apply(event)
+        updateCodexShelf(for: event, sessionID: eventSessionID)
         updateLoopSignal(for: event, sessionID: eventSessionID)
         reconcileIslandSurfaceAfterStateChange()
         if ingress == .bridge {
@@ -1478,6 +1578,95 @@ final class AppModel {
             return workspace
         }
         return "Unknown Project"
+    }
+
+    private func updateCodexShelf(for event: AgentEvent, sessionID: String?) {
+        guard codexShelfEnabled,
+              let sessionID,
+              let session = state.session(id: sessionID),
+              session.tool == .codex else {
+            return
+        }
+
+        let candidates = CodexShelfPathExtractor.extractCandidatePaths(from: event, session: session)
+        guard !candidates.isEmpty else {
+            return
+        }
+
+        let workingDirectory = session.jumpTarget?.workingDirectory
+        let projectName = radarProjectName(for: session)
+
+        for candidate in candidates {
+            guard let resolvedPath = CodexShelfPathExtractor.resolveExistingFilePath(
+                from: candidate,
+                workingDirectory: workingDirectory
+            ) else {
+                continue
+            }
+
+            upsertCodexShelfItem(
+                atPath: resolvedPath,
+                projectName: projectName,
+                sourceSessionID: session.id,
+                discoveredAt: session.updatedAt
+            )
+        }
+
+        pruneCodexShelfIfNeeded()
+    }
+
+    private func upsertCodexShelfItem(
+        atPath path: String,
+        projectName: String,
+        sourceSessionID: String,
+        discoveredAt: Date
+    ) {
+        let normalizedPath = URL(fileURLWithPath: path).standardizedFileURL.path
+        let storageKey = normalizedPath.lowercased()
+        let modifiedAt = fileModificationDate(atPath: normalizedPath) ?? discoveredAt
+        let existing = codexShelfByPath[storageKey]
+
+        codexShelfByPath[storageKey] = CodexShelfItem(
+            id: storageKey,
+            path: normalizedPath,
+            fileName: URL(fileURLWithPath: normalizedPath).lastPathComponent,
+            artifactType: CodexShelfArtifactType.infer(fromPath: normalizedPath),
+            projectName: projectName,
+            sourceSessionID: sourceSessionID,
+            discoveredAt: existing?.discoveredAt ?? discoveredAt,
+            modifiedAt: modifiedAt
+        )
+    }
+
+    private func fileModificationDate(atPath path: String) -> Date? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: path) else {
+            return nil
+        }
+        return attributes[.modificationDate] as? Date
+    }
+
+    private func pruneCodexShelfIfNeeded() {
+        codexShelfByPath = codexShelfByPath.filter { _, item in
+            FileManager.default.fileExists(atPath: item.path)
+        }
+
+        guard codexShelfByPath.count > Self.codexShelfMaxTrackedItems else {
+            return
+        }
+
+        let sortedByRecency = codexShelfByPath
+            .sorted { lhs, rhs in
+                if lhs.value.modifiedAt == rhs.value.modifiedAt {
+                    return lhs.value.fileName.localizedStandardCompare(rhs.value.fileName) == .orderedAscending
+                }
+                return lhs.value.modifiedAt > rhs.value.modifiedAt
+            }
+            .map(\.key)
+
+        let keysToKeep = Set(sortedByRecency.prefix(Self.codexShelfMaxTrackedItems))
+        codexShelfByPath = codexShelfByPath.filter { key, _ in
+            keysToKeep.contains(key)
+        }
     }
 
     private func sessionID(for event: AgentEvent) -> String? {
