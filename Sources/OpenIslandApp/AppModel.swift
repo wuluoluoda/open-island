@@ -784,6 +784,10 @@ final class AppModel {
     }
 
     var codexRadarProjects: [CodexRadarProject] {
+        codexRadarProjects(at: .now)
+    }
+
+    func codexRadarProjects(at date: Date) -> [CodexRadarProject] {
         guard codexRadarEnabled else {
             return []
         }
@@ -796,8 +800,8 @@ final class AppModel {
         let grouped = Dictionary(grouping: codexSessions, by: radarProjectName(for:))
         let projects = grouped.compactMap { projectName, sessions -> CodexRadarProject? in
             let topSession = sessions.max { lhs, rhs in
-                let lhsStatus = codexOperationalStatus(for: lhs)
-                let rhsStatus = codexOperationalStatus(for: rhs)
+                let lhsStatus = codexOperationalStatus(for: lhs, at: date)
+                let rhsStatus = codexOperationalStatus(for: rhs, at: date)
                 if lhsStatus.priority == rhsStatus.priority {
                     return lhs.updatedAt < rhs.updatedAt
                 }
@@ -808,7 +812,7 @@ final class AppModel {
                 return nil
             }
 
-            let status = codexOperationalStatus(for: topSession)
+            let status = codexOperationalStatus(for: topSession, at: date)
             let sortedSessions = sessions.sorted { $0.updatedAt > $1.updatedAt }
             let latestSession = sortedSessions.first ?? topSession
             let latestSummary = latestSession.latestUserPromptText?
@@ -821,7 +825,7 @@ final class AppModel {
                 projectName: projectName,
                 topStatus: status,
                 runningTaskCount: sessions.filter { $0.phase == .running }.count,
-                actionableTaskCount: sessions.filter { codexOperationalStatus(for: $0).requiresUserAction }.count,
+                actionableTaskCount: sessions.filter { codexOperationalStatus(for: $0, at: date).requiresUserAction }.count,
                 latestSummary: latestSummary,
                 updatedAt: latestSession.updatedAt,
                 primarySessionID: topSession.id,

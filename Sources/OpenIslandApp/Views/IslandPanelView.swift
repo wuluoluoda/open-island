@@ -512,6 +512,12 @@ struct IslandPanelView: View {
     }
 
     private var openedContent: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            openedContent(referenceDate: context.date)
+        }
+    }
+
+    private func openedContent(referenceDate: Date) -> some View {
         VStack(spacing: 8) {
             if !model.hasAnyInstalledAgent {
                 installHooksHint
@@ -523,12 +529,13 @@ struct IslandPanelView: View {
                 emptyState
             } else {
                 if !model.codexShelfProjects.isEmpty {
-                    codexShelfPanel
+                    codexShelfPanel(referenceDate: referenceDate)
                 }
-                if !model.codexRadarProjects.isEmpty {
-                    codexRadarPanel
+                let radarProjects = model.codexRadarProjects(at: referenceDate)
+                if !radarProjects.isEmpty {
+                    codexRadarPanel(projects: radarProjects, referenceDate: referenceDate)
                 }
-                sessionList
+                sessionList(referenceDate: referenceDate)
             }
         }
         .padding(.horizontal, 18)
@@ -618,11 +625,11 @@ struct IslandPanelView: View {
 
     private static let maxSessionListHeight: CGFloat = 560
 
-    private var sessionList: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
+    private func sessionList(referenceDate: Date) -> some View {
+        Group {
             if isNotificationMode {
                 // Notification mode: NO ScrollView — content sizes naturally
-                sessionListContent(context: context)
+                sessionListContent(referenceDate: referenceDate)
                     .padding(.vertical, 2)
                     .background(
                         GeometryReader { geo in
@@ -642,7 +649,7 @@ struct IslandPanelView: View {
                 // The parent frame constraint (currentHeight - closedNotchHeight - 12)
                 // determines the viewport; ScrollView handles overflow naturally.
                 ScrollView(.vertical) {
-                    sessionListContent(context: context)
+                    sessionListContent(referenceDate: referenceDate)
                 }
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
@@ -652,13 +659,13 @@ struct IslandPanelView: View {
     }
 
     @ViewBuilder
-    private func sessionListContent(context: TimelineViewDefaultContext) -> some View {
+    private func sessionListContent(referenceDate: Date) -> some View {
         VStack(spacing: 6) {
             if isNotificationMode, let session = model.activeIslandCardSession {
                 IslandSessionRow(
                     session: session,
-                    referenceDate: context.date,
-                    operationalStatus: model.codexOperationalStatus(for: session, at: context.date),
+                    referenceDate: referenceDate,
+                    operationalStatus: model.codexOperationalStatus(for: session, at: referenceDate),
                     isActionable: true,
                     useDrawingGroup: model.notchStatus == .opened,
                     isInteractive: model.notchStatus == .opened,
@@ -687,8 +694,8 @@ struct IslandPanelView: View {
                 ForEach(model.islandListSessions) { session in
                     IslandSessionRow(
                         session: session,
-                        referenceDate: context.date,
-                        operationalStatus: model.codexOperationalStatus(for: session, at: context.date),
+                        referenceDate: referenceDate,
+                        operationalStatus: model.codexOperationalStatus(for: session, at: referenceDate),
                         isActionable: session.phase.requiresAttention || session.id == actionableSessionID,
                         useDrawingGroup: model.notchStatus == .opened,
                         isInteractive: model.notchStatus == .opened,
@@ -705,7 +712,7 @@ struct IslandPanelView: View {
         }
     }
 
-    private var codexRadarPanel: some View {
+    private func codexRadarPanel(projects: [AppModel.CodexRadarProject], referenceDate: Date) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("Codex Radar")
@@ -714,17 +721,17 @@ struct IslandPanelView: View {
 
                 Spacer(minLength: 8)
 
-                Text("\(model.codexRadarProjects.count) projects")
+                Text("\(projects.count) projects")
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.white.opacity(0.45))
             }
 
             VStack(spacing: 6) {
-                ForEach(model.codexRadarProjects) { project in
+                ForEach(projects) { project in
                     Button {
                         jumpToRadarProject(project)
                     } label: {
-                        radarProjectRow(project)
+                        radarProjectRow(project, referenceDate: referenceDate)
                     }
                     .buttonStyle(.plain)
                 }
@@ -742,7 +749,7 @@ struct IslandPanelView: View {
         )
     }
 
-    private var codexShelfPanel: some View {
+    private func codexShelfPanel(referenceDate: Date) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("Artifact Shelf")
@@ -758,7 +765,7 @@ struct IslandPanelView: View {
 
             VStack(spacing: 6) {
                 ForEach(Array(model.codexShelfProjects.prefix(3)), id: \.id) { project in
-                    shelfProjectRow(project)
+                    shelfProjectRow(project, referenceDate: referenceDate)
                 }
             }
         }
@@ -774,7 +781,7 @@ struct IslandPanelView: View {
         )
     }
 
-    private func shelfProjectRow(_ project: AppModel.CodexShelfProject) -> some View {
+    private func shelfProjectRow(_ project: AppModel.CodexShelfProject, referenceDate: Date) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 6) {
                 Text(project.projectName)
@@ -791,7 +798,7 @@ struct IslandPanelView: View {
 
             VStack(spacing: 4) {
                 ForEach(Array(project.items.prefix(3)), id: \.id) { item in
-                    shelfItemRow(item)
+                    shelfItemRow(item, referenceDate: referenceDate)
                 }
             }
         }
@@ -803,7 +810,7 @@ struct IslandPanelView: View {
         )
     }
 
-    private func shelfItemRow(_ item: CodexShelfItem) -> some View {
+    private func shelfItemRow(_ item: CodexShelfItem, referenceDate: Date) -> some View {
         HStack(spacing: 6) {
             Image(systemName: item.artifactType.symbolName)
                 .font(.system(size: 9.5, weight: .semibold))
@@ -815,7 +822,7 @@ struct IslandPanelView: View {
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.white.opacity(0.86))
                     .lineLimit(1)
-                Text("\(item.artifactType.label) · \(radarAgeLabel(item.modifiedAt)) · \(model.codexShelfSourceLabel(for: item))")
+                Text("\(item.artifactType.label) · \(radarAgeLabel(item.modifiedAt, referenceDate: referenceDate)) · \(model.codexShelfSourceLabel(for: item))")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.white.opacity(0.46))
                     .lineLimit(1)
@@ -847,7 +854,7 @@ struct IslandPanelView: View {
         }
     }
 
-    private func radarProjectRow(_ project: AppModel.CodexRadarProject) -> some View {
+    private func radarProjectRow(_ project: AppModel.CodexRadarProject, referenceDate: Date) -> some View {
         HStack(alignment: .top, spacing: 9) {
             Circle()
                 .fill(radarStatusColor(project.topStatus))
@@ -863,7 +870,7 @@ struct IslandPanelView: View {
 
                     Spacer(minLength: 6)
 
-                    Text(radarAgeLabel(project.updatedAt))
+                    Text(radarAgeLabel(project.updatedAt, referenceDate: referenceDate))
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(.white.opacity(0.42))
                 }
@@ -920,8 +927,8 @@ struct IslandPanelView: View {
         }
     }
 
-    private func radarAgeLabel(_ updatedAt: Date) -> String {
-        let age = max(0, Int(Date.now.timeIntervalSince(updatedAt)))
+    private func radarAgeLabel(_ updatedAt: Date, referenceDate: Date) -> String {
+        let age = max(0, Int(referenceDate.timeIntervalSince(updatedAt)))
         if age < 60 {
             return "<1m"
         }
