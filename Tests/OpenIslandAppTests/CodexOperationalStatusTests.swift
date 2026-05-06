@@ -196,6 +196,13 @@ struct CodexOperationalStatusTests {
     }
 
     @Test
+    func reconnectingUsesStableRadarSortPriority() {
+        #expect(CodexOperationalStatus.reconnecting.priority > CodexOperationalStatus.detached.priority)
+        #expect(CodexOperationalStatus.reconnecting.radarSortPriority < CodexOperationalStatus.detached.radarSortPriority)
+        #expect(CodexOperationalStatus.connecting.radarSortPriority == CodexOperationalStatus.running.radarSortPriority)
+    }
+
+    @Test
     func loopSuspectedRespectsThresholdAndSwitch() {
         let now = Date(timeIntervalSince1970: 20_000)
         var session = AgentSession(

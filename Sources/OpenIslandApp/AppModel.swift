@@ -54,6 +54,7 @@ final class AppModel {
         let id: String
         let projectName: String
         let topStatus: CodexOperationalStatus
+        let sortPriority: Int
         let runningTaskCount: Int
         let actionableTaskCount: Int
         let latestSummary: String
@@ -813,6 +814,9 @@ final class AppModel {
             }
 
             let status = codexOperationalStatus(for: topSession, at: date)
+            let radarSortPriority = sessions
+                .map { codexOperationalStatus(for: $0, at: date).radarSortPriority }
+                .max() ?? status.radarSortPriority
             let sortedSessions = sessions.sorted { $0.updatedAt > $1.updatedAt }
             let latestSession = sortedSessions.first ?? topSession
             let latestSummary = latestSession.latestUserPromptText?
@@ -824,6 +828,7 @@ final class AppModel {
                 id: projectName.lowercased(),
                 projectName: projectName,
                 topStatus: status,
+                sortPriority: radarSortPriority,
                 runningTaskCount: sessions.filter { $0.phase == .running }.count,
                 actionableTaskCount: sessions.filter { codexOperationalStatus(for: $0, at: date).requiresUserAction }.count,
                 latestSummary: latestSummary,
@@ -834,13 +839,13 @@ final class AppModel {
         }
 
         return projects.sorted { lhs, rhs in
-            if lhs.topStatus.priority == rhs.topStatus.priority {
+            if lhs.sortPriority == rhs.sortPriority {
                 if lhs.updatedAt == rhs.updatedAt {
                     return lhs.projectName.localizedStandardCompare(rhs.projectName) == .orderedAscending
                 }
                 return lhs.updatedAt > rhs.updatedAt
             }
-            return lhs.topStatus.priority > rhs.topStatus.priority
+            return lhs.sortPriority > rhs.sortPriority
         }
     }
 

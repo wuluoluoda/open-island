@@ -35,6 +35,21 @@ enum CodexOperationalStatus: Equatable {
         }
     }
 
+    /// Priority used for project-level radar ordering.
+    ///
+    /// Connecting/reconnecting are global transport hints and can briefly flicker
+    /// while Codex.app/app-server reconnects.  Keep their visible label/color, but
+    /// do not let that volatile global signal reorder projects ahead of stable
+    /// per-session states such as interrupted or detached.
+    var radarSortPriority: Int {
+        switch self {
+        case .reconnecting, .connecting:
+            400
+        default:
+            priority
+        }
+    }
+
     var label: String {
         switch self {
         case .waitingApproval: "Waiting Approval"
