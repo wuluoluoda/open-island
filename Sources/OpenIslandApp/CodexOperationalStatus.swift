@@ -203,6 +203,11 @@ extension AgentSession {
     }
 
     private var isDetachedFromRuntime: Bool {
+        if isCodexAppSession && tool == .codex {
+            return jumpTarget?.codexThreadID == nil
+                && phase != .completed
+        }
+
         if attachmentState == .detached {
             return true
         }

@@ -196,6 +196,73 @@ struct CodexOperationalStatusTests {
     }
 
     @Test
+    func codexAppThreadJumpTargetOverridesTerminalDetachFlicker() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var session = AgentSession(
+            id: "codex-app-thread",
+            title: "Codex · repo",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .detached,
+            phase: .running,
+            summary: "Running in Codex.app",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Codex.app",
+                workspaceName: "repo",
+                paneTitle: "Codex · repo",
+                workingDirectory: "/tmp/repo",
+                codexThreadID: "thread-1"
+            )
+        )
+        session.isCodexAppSession = true
+        session.isProcessAlive = true
+
+        let signals = CodexOperationalStatusSignals(
+            now: now,
+            bridgeConnectionState: .connected,
+            codexAppServerConnectionState: .connected,
+            stalledThreshold: 12 * 60,
+            loopSuspectedEnabled: false,
+            loopRepeatCount: 0,
+            loopSuspectedThreshold: 4,
+            recentCompletionWindow: 20 * 60
+        )
+
+        #expect(session.codexOperationalStatus(signals: signals) == .running)
+    }
+
+    @Test
+    func codexAppSessionWithoutThreadJumpTargetStaysDetached() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var session = AgentSession(
+            id: "codex-app-detached",
+            title: "Codex · repo",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Missing thread target",
+            updatedAt: now
+        )
+        session.isCodexAppSession = true
+        session.isProcessAlive = true
+
+        let signals = CodexOperationalStatusSignals(
+            now: now,
+            bridgeConnectionState: .connected,
+            codexAppServerConnectionState: .connected,
+            stalledThreshold: 12 * 60,
+            loopSuspectedEnabled: false,
+            loopRepeatCount: 0,
+            loopSuspectedThreshold: 4,
+            recentCompletionWindow: 20 * 60
+        )
+
+        #expect(session.codexOperationalStatus(signals: signals) == .detached)
+    }
+
+    @Test
     func reconnectingUsesStableRadarSortPriority() {
         #expect(CodexOperationalStatus.reconnecting.priority > CodexOperationalStatus.detached.priority)
         #expect(CodexOperationalStatus.reconnecting.radarSortPriority < CodexOperationalStatus.detached.radarSortPriority)
