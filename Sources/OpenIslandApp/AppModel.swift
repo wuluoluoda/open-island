@@ -294,9 +294,8 @@ final class AppModel {
     }
     var codexStalledThresholdMinutes: Int = 12 {
         didSet {
-            codexStalledThresholdMinutes = max(3, codexStalledThresholdMinutes)
             guard hasFinishedInit, codexStalledThresholdMinutes != oldValue else { return }
-            UserDefaults.standard.set(codexStalledThresholdMinutes, forKey: Self.codexStalledThresholdMinutesDefaultsKey)
+            UserDefaults.standard.set(max(3, codexStalledThresholdMinutes), forKey: Self.codexStalledThresholdMinutesDefaultsKey)
         }
     }
     var codexLoopSuspectedEnabled: Bool = false {
@@ -307,9 +306,8 @@ final class AppModel {
     }
     var codexLoopSuspectedThreshold: Int = 4 {
         didSet {
-            codexLoopSuspectedThreshold = max(3, codexLoopSuspectedThreshold)
             guard hasFinishedInit, codexLoopSuspectedThreshold != oldValue else { return }
-            UserDefaults.standard.set(codexLoopSuspectedThreshold, forKey: Self.codexLoopSuspectedThresholdDefaultsKey)
+            UserDefaults.standard.set(max(3, codexLoopSuspectedThreshold), forKey: Self.codexLoopSuspectedThresholdDefaultsKey)
         }
     }
     var codexShelfEnabled: Bool = true {
@@ -619,9 +617,15 @@ final class AppModel {
             )
         }
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
-        codexStalledThresholdMinutes = UserDefaults.standard.integer(forKey: Self.codexStalledThresholdMinutesDefaultsKey)
+        codexStalledThresholdMinutes = max(
+            3,
+            UserDefaults.standard.integer(forKey: Self.codexStalledThresholdMinutesDefaultsKey)
+        )
         codexLoopSuspectedEnabled = UserDefaults.standard.bool(forKey: Self.codexLoopSuspectedEnabledDefaultsKey)
-        codexLoopSuspectedThreshold = UserDefaults.standard.integer(forKey: Self.codexLoopSuspectedThresholdDefaultsKey)
+        codexLoopSuspectedThreshold = max(
+            3,
+            UserDefaults.standard.integer(forKey: Self.codexLoopSuspectedThresholdDefaultsKey)
+        )
         codexShelfEnabled = UserDefaults.standard.bool(forKey: Self.codexShelfEnabledDefaultsKey)
         codexRadarEnabled = UserDefaults.standard.bool(forKey: Self.codexRadarEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
