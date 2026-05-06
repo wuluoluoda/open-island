@@ -736,6 +736,9 @@ struct IslandPanelView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .transaction { transaction in
+                transaction.animation = nil
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

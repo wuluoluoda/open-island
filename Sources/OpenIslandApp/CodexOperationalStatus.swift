@@ -115,19 +115,19 @@ extension AgentSession {
             break
         }
 
-        if shouldShowReconnecting(using: signals) {
-            return .reconnecting
-        }
-        if shouldShowConnecting(using: signals) {
-            return .connecting
-        }
-
         if phase == .completed && lastTurnInterrupted {
             return .interrupted
         }
 
         if isDetachedFromRuntime {
             return .detached
+        }
+
+        if shouldShowReconnecting(using: signals) {
+            return .reconnecting
+        }
+        if shouldShowConnecting(using: signals) {
+            return .connecting
         }
 
         if isRunningAndStalled(using: signals) {

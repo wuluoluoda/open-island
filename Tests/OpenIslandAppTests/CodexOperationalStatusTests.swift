@@ -166,6 +166,36 @@ struct CodexOperationalStatusTests {
     }
 
     @Test
+    func reconnectingDoesNotOverrideDetachedSessions() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var session = AgentSession(
+            id: "codex-detached-running",
+            title: "Codex · repo",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .detached,
+            phase: .running,
+            summary: "Detached",
+            updatedAt: now
+        )
+        session.isCodexAppSession = true
+        session.isProcessAlive = true
+
+        let signals = CodexOperationalStatusSignals(
+            now: now,
+            bridgeConnectionState: .connected,
+            codexAppServerConnectionState: .reconnecting,
+            stalledThreshold: 12 * 60,
+            loopSuspectedEnabled: false,
+            loopRepeatCount: 0,
+            loopSuspectedThreshold: 4,
+            recentCompletionWindow: 20 * 60
+        )
+
+        #expect(session.codexOperationalStatus(signals: signals) == .detached)
+    }
+
+    @Test
     func loopSuspectedRespectsThresholdAndSwitch() {
         let now = Date(timeIntervalSince1970: 20_000)
         var session = AgentSession(
