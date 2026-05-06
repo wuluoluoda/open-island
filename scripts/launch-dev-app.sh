@@ -28,7 +28,12 @@ app_binary="$build_root/OpenIslandApp"
 hooks_binary="$build_root/OpenIslandHooks"
 setup_binary="$build_root/OpenIslandSetup"
 
-python3 "$brand_script"
+if ! python3 "$brand_script"; then
+    echo
+    echo "⚠ Brand icon generation skipped (python dependency missing)."
+    echo "  Continuing with existing $brand_icon."
+    echo
+fi
 if [ "$skip_setup" = false ]; then
   "$setup_binary" install --hooks-binary "$hooks_binary"
 fi
