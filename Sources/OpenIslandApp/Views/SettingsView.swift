@@ -173,6 +173,8 @@ struct GeneralSettingsPane: View {
     var model: AppModel
 
     private var lang: LanguageManager { model.lang }
+    private let stalledThresholdOptions = [6, 8, 10, 12, 15, 20]
+    private let loopThresholdOptions = [3, 4, 5, 6, 8]
 
     var body: some View {
         Form {
@@ -223,6 +225,46 @@ struct GeneralSettingsPane: View {
                     get: { model.suppressFrontmostNotifications },
                     set: { model.suppressFrontmostNotifications = $0 }
                 ))
+            }
+
+            Section {
+                Toggle(lang.t("settings.general.codexRadarView"), isOn: Binding(
+                    get: { model.codexRadarEnabled },
+                    set: { model.codexRadarEnabled = $0 }
+                ))
+
+                Toggle(lang.t("settings.general.codexShelf"), isOn: Binding(
+                    get: { model.codexShelfEnabled },
+                    set: { model.codexShelfEnabled = $0 }
+                ))
+
+                Toggle(lang.t("settings.general.codexLoopSuspected"), isOn: Binding(
+                    get: { model.codexLoopSuspectedEnabled },
+                    set: { model.codexLoopSuspectedEnabled = $0 }
+                ))
+
+                Picker(lang.t("settings.general.codexStalledThreshold"), selection: Binding(
+                    get: { model.codexStalledThresholdMinutes },
+                    set: { model.codexStalledThresholdMinutes = $0 }
+                )) {
+                    ForEach(stalledThresholdOptions, id: \.self) { minutes in
+                        Text(lang.t("settings.general.minutes", minutes)).tag(minutes)
+                    }
+                }
+
+                Picker(lang.t("settings.general.codexLoopThreshold"), selection: Binding(
+                    get: { model.codexLoopSuspectedThreshold },
+                    set: { model.codexLoopSuspectedThreshold = $0 }
+                )) {
+                    ForEach(loopThresholdOptions, id: \.self) { attempts in
+                        Text(lang.t("settings.general.attempts", attempts)).tag(attempts)
+                    }
+                }
+                .disabled(!model.codexLoopSuspectedEnabled)
+            } header: {
+                Text(lang.t("settings.general.codexIsland"))
+            } footer: {
+                Text(lang.t("settings.general.codexIslandHint"))
             }
 
         }

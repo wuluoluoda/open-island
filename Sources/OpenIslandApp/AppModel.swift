@@ -323,6 +323,7 @@ final class AppModel {
         didSet {
             guard hasFinishedInit, codexRadarEnabled != oldValue else { return }
             UserDefaults.standard.set(codexRadarEnabled, forKey: Self.codexRadarEnabledDefaultsKey)
+            refreshOverlayPlacementIfVisible()
         }
     }
     var launchAtLoginEnabled: Bool = false {
@@ -1301,6 +1302,18 @@ final class AppModel {
         }
 
         lastActionMessage = "Cannot reveal \(item.fileName): path no longer exists."
+    }
+
+    func codexShelfSourceLabel(for item: CodexShelfItem) -> String {
+        if let session = state.session(id: item.sourceSessionID) {
+            let workspace = radarProjectName(for: session)
+            return workspace == "Unknown Project" ? session.title : workspace
+        }
+
+        if item.sourceSessionID.count <= 8 {
+            return item.sourceSessionID
+        }
+        return String(item.sourceSessionID.prefix(8))
     }
 
     private func jump(to jumpTarget: JumpTarget?) {
