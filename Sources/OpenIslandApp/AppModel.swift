@@ -318,6 +318,12 @@ final class AppModel {
             refreshOverlayPlacementIfVisible()
         }
     }
+    var isCodexShelfExpanded: Bool = false {
+        didSet {
+            guard isCodexShelfExpanded != oldValue else { return }
+            refreshOverlayPlacementIfVisible()
+        }
+    }
     var codexRadarEnabled: Bool = true {
         didSet {
             guard hasFinishedInit, codexRadarEnabled != oldValue else { return }

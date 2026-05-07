@@ -615,8 +615,9 @@ final class OverlayPanelController {
             ? CGFloat.zero
             : Self.codexPanelVerticalPadding
                 + Self.codexPanelHeaderHeight
-                + Self.codexPanelHeaderContentSpacing
-                + shelfProjectsHeight(for: shelfProjects)
+                + (model.isCodexShelfExpanded
+                    ? Self.codexPanelHeaderContentSpacing + shelfProjectsHeight(for: shelfProjects)
+                    : 0)
 
         let visiblePanelCount = shelfHeight > 0 ? 1 : 0
         let panelSpacing = CGFloat(visiblePanelCount) * Self.codexPanelSpacing

@@ -105,6 +105,8 @@ struct IslandPanelView: View {
     private static let headerTopPadding: CGFloat = 2
     private static let notchLaneSafetyInset: CGFloat = 12
     private static let closedIdleEdgeHeight: CGFloat = 4
+    private static let codexShelfTriggerHeight: CGFloat = 42
+    private static let codexShelfDetailLatchInset: CGFloat = 44
 
     var model: AppModel
 
@@ -761,23 +763,53 @@ struct IslandPanelView: View {
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.white.opacity(0.45))
             }
+            .frame(height: 22)
 
-            VStack(spacing: 6) {
-                ForEach(Array(model.codexShelfProjects.prefix(3)), id: \.id) { project in
-                    shelfProjectRow(project, referenceDate: referenceDate)
+            if model.isCodexShelfExpanded {
+                VStack(spacing: 6) {
+                    ForEach(Array(model.codexShelfProjects.prefix(3)), id: \.id) { project in
+                        shelfProjectRow(project, referenceDate: referenceDate)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transaction { transaction in
+                    transaction.animation = .smooth(duration: 0.16)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+        .frame(minHeight: model.isCodexShelfExpanded ? nil : Self.codexShelfTriggerHeight)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.04))
+                .fill(Color.white.opacity(model.isCodexShelfExpanded ? 0.04 : 0.025))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                .stroke(Color.white.opacity(model.isCodexShelfExpanded ? 0.08 : 0.055), lineWidth: 0.5)
         )
+        .contentShape(Rectangle())
+        .onContinuousHover { phase in
+            switch phase {
+            case let .active(location):
+                updateCodexShelfHover(location: location)
+            case .ended:
+                model.isCodexShelfExpanded = false
+            }
+        }
+    }
+
+    private func updateCodexShelfHover(location: CGPoint) {
+        let isInTrigger = location.y >= 0
+            && location.y <= Self.codexShelfTriggerHeight
+            && location.x >= 0
+
+        let isInDetailFrame = model.isCodexShelfExpanded
+            && location.y > Self.codexShelfTriggerHeight
+            && location.x >= Self.codexShelfDetailLatchInset
+
+        model.isCodexShelfExpanded = isInTrigger || isInDetailFrame
     }
 
     private func shelfProjectRow(_ project: AppModel.CodexShelfProject, referenceDate: Date) -> some View {
