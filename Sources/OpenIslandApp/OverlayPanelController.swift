@@ -111,6 +111,12 @@ final class OverlayPanelController {
         return positionPanel(panel, preferredScreenID: preferredScreenID, animated: true)
     }
 
+    func restartEventMonitoring() {
+        cancelHoverOpenImmediately()
+        eventMonitors.stop()
+        startEventMonitoring()
+    }
+
     func placementDiagnostics(preferredScreenID: String?) -> OverlayPlacementDiagnostics? {
         let panelSize = panel?.frame.size ?? OverlayDisplayResolver.defaultPanelSize
         return OverlayDisplayResolver.diagnostics(preferredScreenID: preferredScreenID, panelSize: panelSize)

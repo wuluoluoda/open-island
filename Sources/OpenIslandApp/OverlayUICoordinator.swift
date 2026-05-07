@@ -242,6 +242,22 @@ final class OverlayUICoordinator {
         refreshOverlayPlacement()
     }
 
+    func recoverOverlayInteractionAfterSystemChange() {
+        refreshOverlayDisplayConfiguration()
+        ensureOverlayPanel()
+        overlayPanelController.restartEventMonitoring()
+
+        // Display geometry can settle one runloop later after wake, display
+        // attach/detach, or Space switches. Re-run once shortly after the
+        // notification so the closed hover hit area follows the final screen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self else { return }
+            self.refreshOverlayDisplayConfiguration()
+            self.ensureOverlayPanel()
+            self.overlayPanelController.restartEventMonitoring()
+        }
+    }
+
     // MARK: - Pointer tracking
 
     var shouldAutoCollapseOnMouseLeave: Bool {

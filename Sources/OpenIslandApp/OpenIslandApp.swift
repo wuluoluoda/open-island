@@ -71,6 +71,16 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    override init() {
+        super.init()
+        installOverlayRecoveryObservers()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -84,6 +94,34 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         model.showSettings()
         return false
+    }
+
+    private func installOverlayRecoveryObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(recoverOverlayInteractionAfterSystemChange(_:)),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(recoverOverlayInteractionAfterSystemChange(_:)),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(recoverOverlayInteractionAfterSystemChange(_:)),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    @objc
+    private func recoverOverlayInteractionAfterSystemChange(_ notification: Notification) {
+        model.recoverOverlayInteractionAfterSystemChange()
     }
 }
 

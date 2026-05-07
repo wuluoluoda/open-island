@@ -1201,6 +1201,7 @@ final class AppModel {
     func refreshOverlayDisplayConfiguration() { overlay.refreshOverlayDisplayConfiguration() }
     func refreshOverlayPlacement() { overlay.refreshOverlayPlacement() }
     private func refreshOverlayPlacementIfVisible() { overlay.refreshOverlayPlacementIfVisible() }
+    func recoverOverlayInteractionAfterSystemChange() { overlay.recoverOverlayInteractionAfterSystemChange() }
     func notePointerInsideIslandSurface() { overlay.notePointerInsideIslandSurface() }
     func handlePointerExitedIslandSurface() { overlay.handlePointerExitedIslandSurface() }
     private func presentNotificationSurface(_ surface: IslandSurface) { overlay.presentNotificationSurface(surface) }
