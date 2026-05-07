@@ -817,10 +817,10 @@ final class AppModel {
             let topSession = sessions.max { lhs, rhs in
                 let lhsStatus = codexOperationalStatus(for: lhs, at: date)
                 let rhsStatus = codexOperationalStatus(for: rhs, at: date)
-                if lhsStatus.priority == rhsStatus.priority {
+                if lhsStatus.stableSortPriority == rhsStatus.stableSortPriority {
                     return lhs.updatedAt < rhs.updatedAt
                 }
-                return lhsStatus.priority < rhsStatus.priority
+                return lhsStatus.stableSortPriority < rhsStatus.stableSortPriority
             }
 
             guard let topSession else {
@@ -2040,7 +2040,7 @@ final class AppModel {
     private func displayPriority(for session: AgentSession, now: Date) -> Int {
         if session.tool == .codex {
             let status = codexOperationalStatus(for: session, at: now)
-            var score = status.priority * 100
+            var score = status.stableSortPriority * 100
 
             if session.currentToolName?.isEmpty == false {
                 score += 600

@@ -294,8 +294,17 @@ struct CodexOperationalStatusTests {
     @Test
     func reconnectingUsesStableRadarSortPriority() {
         #expect(CodexOperationalStatus.reconnecting.priority > CodexOperationalStatus.detached.priority)
+        #expect(CodexOperationalStatus.reconnecting.stableSortPriority < CodexOperationalStatus.detached.stableSortPriority)
         #expect(CodexOperationalStatus.reconnecting.radarSortPriority < CodexOperationalStatus.detached.radarSortPriority)
+        #expect(CodexOperationalStatus.connecting.stableSortPriority == CodexOperationalStatus.running.stableSortPriority)
         #expect(CodexOperationalStatus.connecting.radarSortPriority == CodexOperationalStatus.running.radarSortPriority)
+    }
+
+    @Test
+    func statusActivityLineOverridesStayCentralized() {
+        #expect(CodexOperationalStatus.reconnecting.activityLineOverride == "Reconnecting to runtime.")
+        #expect(CodexOperationalStatus.interrupted.activityLineOverride == "Last turn was interrupted.")
+        #expect(CodexOperationalStatus.running.activityLineOverride == nil)
     }
 
     @Test

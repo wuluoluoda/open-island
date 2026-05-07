@@ -35,19 +35,24 @@ enum CodexOperationalStatus: Equatable {
         }
     }
 
-    /// Priority used for project-level radar ordering.
+    /// Priority used for stable ordering of list-like surfaces.
     ///
     /// Connecting/reconnecting are global transport hints and can briefly flicker
     /// while Codex.app/app-server reconnects.  Keep their visible label/color, but
-    /// do not let that volatile global signal reorder projects ahead of stable
+    /// do not let that volatile global signal reorder rows ahead of stable
     /// per-session states such as interrupted or detached.
-    var radarSortPriority: Int {
+    var stableSortPriority: Int {
         switch self {
         case .reconnecting, .connecting:
             400
         default:
             priority
         }
+    }
+
+    /// Priority used for project-level radar ordering.
+    var radarSortPriority: Int {
+        stableSortPriority
     }
 
     var label: String {
@@ -62,6 +67,25 @@ enum CodexOperationalStatus: Equatable {
         case .loopSuspected: "Loop Suspected"
         case .running: "Running"
         case .recentlyCompleted, .completed: "Completed"
+        }
+    }
+
+    var activityLineOverride: String? {
+        switch self {
+        case .connecting:
+            "Connecting to runtime."
+        case .reconnecting:
+            "Reconnecting to runtime."
+        case .interrupted:
+            "Last turn was interrupted."
+        case .detached:
+            "Session detached from terminal/thread."
+        case .stalled:
+            "No new events for a while."
+        case .loopSuspected:
+            "Repeated command or failure pattern."
+        case .waitingApproval, .waitingInput, .running, .recentlyCompleted, .completed:
+            nil
         }
     }
 

@@ -585,7 +585,11 @@ final class OverlayPanelController {
             // a measurement→reposition cycle.
             if let actionableID,
                let session = model.state.session(id: actionableID) {
-                let rowHeight = session.estimatedIslandRowHeight(at: now)
+                let rowHeight = session.estimatedIslandRowHeight(
+                    at: now,
+                    operationalStatus: model.codexOperationalStatus(for: session, at: now),
+                    isActionable: true
+                )
                 let bodyHeight = actionableBodyHeight(for: session, model: model)
                 return rowHeight + bodyHeight + Self.openedContentVerticalInsets
             }
@@ -593,11 +597,16 @@ final class OverlayPanelController {
         }
 
         let rowHeights = visibleSessions.map { session -> CGFloat in
+            let isActionable = session.id == actionableID
+            let rowHeight = session.estimatedIslandRowHeight(
+                at: now,
+                operationalStatus: model.codexOperationalStatus(for: session, at: now),
+                isActionable: isActionable
+            )
             if session.id == actionableID {
-                return session.estimatedIslandRowHeight(at: now)
-                    + actionableBodyHeight(for: session, model: model)
+                return rowHeight + actionableBodyHeight(for: session, model: model)
             }
-            return session.estimatedIslandRowHeight(at: now)
+            return rowHeight
         }
 
         let codexPanelsHeight = codexOpenedPanelsHeight(for: model, at: now)

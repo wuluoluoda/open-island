@@ -51,13 +51,21 @@ private struct AutoHeightScrollView<Content: View>: View {
 
 extension AgentSession {
     /// Estimated row height matching `IslandSessionRow` layout for viewport sizing.
-    func estimatedIslandRowHeight(at date: Date) -> CGFloat {
+    func estimatedIslandRowHeight(
+        at date: Date,
+        operationalStatus: CodexOperationalStatus? = nil,
+        isActionable: Bool = false
+    ) -> CGFloat {
         let presence = islandPresence(at: date)
         // Base: vertical padding (28) + headline (~18) + rounding (2)
         var height: CGFloat = 48
-        guard presence != .inactive else { return height }
+        let showsExpandedContent = presence != .inactive
+        guard showsExpandedContent || isActionable else { return height }
         if spotlightPromptLineText != nil { height += 24 }   // spacing (8) + text (16)
-        if spotlightActivityLineText != nil { height += 22 }  // spacing (8) + text (14)
+        if operationalStatus?.activityLineOverride != nil || spotlightActivityLineText != nil {
+            height += 22  // spacing (8) + text (14)
+        }
+        guard showsExpandedContent else { return height }
         if let subagents = claudeMetadata?.activeSubagents, !subagents.isEmpty {
             height += 22  // spacing (8) + header (14)
             height += CGFloat(subagents.count) * 18  // each subagent row (spacing 4 + text 14)
@@ -139,10 +147,10 @@ struct IslandPanelView: View {
         model.surfacedSessions.max { lhs, rhs in
             let lhsStatus = model.codexOperationalStatus(for: lhs)
             let rhsStatus = model.codexOperationalStatus(for: rhs)
-            if lhsStatus.priority == rhsStatus.priority {
+            if lhsStatus.stableSortPriority == rhsStatus.stableSortPriority {
                 return lhs.updatedAt < rhs.updatedAt
             }
-            return lhsStatus.priority < rhsStatus.priority
+            return lhsStatus.stableSortPriority < rhsStatus.stableSortPriority
         }
     }
 
@@ -1861,22 +1869,7 @@ private struct IslandSessionRow: View {
     }
 
     private var statusActivityLineOverride: String? {
-        switch operationalStatus {
-        case .connecting:
-            "Connecting to runtime."
-        case .reconnecting:
-            "Reconnecting to runtime."
-        case .interrupted:
-            "Last turn was interrupted."
-        case .detached:
-            "Session detached from terminal/thread."
-        case .stalled:
-            "No new events for a while."
-        case .loopSuspected:
-            "Repeated command or failure pattern."
-        case .waitingApproval, .waitingInput, .running, .recentlyCompleted, .completed:
-            nil
-        }
+        operationalStatus.activityLineOverride
     }
 
     private func handlePrimaryTap() {
