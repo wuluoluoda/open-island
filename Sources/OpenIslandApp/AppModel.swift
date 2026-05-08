@@ -79,6 +79,7 @@ final class AppModel {
 
     private static let loopSignalRetentionWindow: TimeInterval = 20 * 60
     private static let codexShelfMaxTrackedItems = 120
+    private static let codexShelfScanMinimumInterval: TimeInterval = 10
 
     let lang = LanguageManager.shared
 
@@ -566,6 +567,9 @@ final class AppModel {
 
     @ObservationIgnored
     private var codexShelfWorkspaceSnapshotsBySessionID: [String: [String: Date]] = [:]
+
+    @ObservationIgnored
+    private var codexShelfLastScanDateBySessionID: [String: Date] = [:]
 
     @ObservationIgnored
     private var hasStarted = false
@@ -1640,6 +1644,12 @@ final class AppModel {
             return
         }
 
+        let timestamp = codexShelfEventTimestamp(event) ?? session.updatedAt
+        let forceScan = codexShelfEventForcesScan(event)
+        guard shouldScanCodexShelf(sessionID: session.id, timestamp: timestamp, force: forceScan) else {
+            return
+        }
+
         let currentSnapshot = codexShelfWorkspaceSnapshot(workingDirectory: workingDirectory)
         guard !currentSnapshot.isEmpty else {
             return
@@ -1679,6 +1689,55 @@ final class AppModel {
 
         codexShelfWorkspaceSnapshotsBySessionID[session.id] = currentSnapshot
         pruneCodexShelfIfNeeded()
+    }
+
+    private func shouldScanCodexShelf(sessionID: String, timestamp: Date, force: Bool) -> Bool {
+        if !force,
+           let lastScan = codexShelfLastScanDateBySessionID[sessionID],
+           timestamp.timeIntervalSince(lastScan) < Self.codexShelfScanMinimumInterval {
+            return false
+        }
+
+        codexShelfLastScanDateBySessionID[sessionID] = timestamp
+        return true
+    }
+
+    private func codexShelfEventForcesScan(_ event: AgentEvent) -> Bool {
+        switch event {
+        case .sessionStarted, .sessionCompleted:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func codexShelfEventTimestamp(_ event: AgentEvent) -> Date? {
+        switch event {
+        case let .sessionStarted(payload):
+            payload.timestamp
+        case let .activityUpdated(payload):
+            payload.timestamp
+        case let .permissionRequested(payload):
+            payload.timestamp
+        case let .questionAsked(payload):
+            payload.timestamp
+        case let .sessionCompleted(payload):
+            payload.timestamp
+        case let .jumpTargetUpdated(payload):
+            payload.timestamp
+        case let .sessionMetadataUpdated(payload):
+            payload.timestamp
+        case let .claudeSessionMetadataUpdated(payload):
+            payload.timestamp
+        case let .geminiSessionMetadataUpdated(payload):
+            payload.timestamp
+        case let .openCodeSessionMetadataUpdated(payload):
+            payload.timestamp
+        case let .cursorSessionMetadataUpdated(payload):
+            payload.timestamp
+        case let .actionableStateResolved(payload):
+            payload.timestamp
+        }
     }
 
     private func upsertCodexShelfItem(
