@@ -13,14 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases/latest"><img src="https://img.shields.io/github/v/release/Octane0411/open-vibe-island?style=flat-square&label=release&color=blue" alt="最新版本"></a>
-  <a href="https://github.com/Octane0411/open-vibe-island/stargazers"><img src="https://img.shields.io/github/stars/Octane0411/open-vibe-island?style=flat-square&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/wuluoluoda/open-vibe-island/releases/latest"><img src="https://img.shields.io/github/v/release/wuluoluoda/open-vibe-island?style=flat-square&label=fork%20build&color=blue" alt="Fork 构建"></a>
+  <a href="https://github.com/Octane0411/open-vibe-island"><img src="https://img.shields.io/badge/upstream-Octane0411%2Fopen--vibe--island-lightgrey?style=flat-square" alt="上游仓库"></a>
   <a href="https://discord.gg/bPF2HpbCFb"><img src="https://img.shields.io/discord/1490752192368476253?style=flat-square&logo=discord&label=discord&color=5865F2" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL%20v3-green?style=flat-square" alt="License: GPL v3"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases">下载</a> ·
+  <a href="https://github.com/wuluoluoda/open-vibe-island/releases">Fork 构建</a> ·
+  <a href="https://github.com/Octane0411/open-vibe-island">上游仓库</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="docs/roadmap.zh-CN.md">路线图</a> ·
   <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
@@ -31,6 +32,20 @@
 </p>
 
 ---
+
+## Fork 说明
+
+这个仓库是 [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island) 的个人 fork。它保留上游 GPLv3 基础，重点面向我本地高频使用的 Codex 工作流。
+
+### 这个 Fork 的改进
+
+- **Codex Desktop App 雷达面板** — 更密集地展示实时 thread/turn 状态、重连中的会话、中断任务和循环提示。
+- **Codex artifact shelf** — 为 Codex 产出的文件和路径增加专门的 shelf，并支持从 island UI 快速操作文件。
+- **更稳定的 Codex 会话追踪** — 优化行排序、瞬时重连、陈旧 interrupted 状态、已完成会话过期和会话标签。
+- **覆盖层交互修复** — 调整 hover 恢复、定向展开 shelf 和面板高度，适合更长时间的 Codex 会话。
+- **可审查的本地工作流** — 增加 build checkpoint tag、工具版本说明和更完整的测试，方便打包与回滚。
+
+可以从 [GitHub Releases](https://github.com/wuluoluoda/open-vibe-island/releases) 下载这个 fork 当前的 DMG。本地构建目前未签名，下载后 macOS Gatekeeper 可能需要右键**打开**，或手动移除 quarantine。
 
 ## Open Island 是什么？
 
@@ -111,7 +126,9 @@ Open Island 驻留在 Mac 的**刘海区域**（或顶部栏），为你的 AI c
 
 ### 方式一：直接下载
 
-从 [GitHub Releases](https://github.com/Octane0411/open-vibe-island/releases) 下载最新 DMG——已签名公证，开箱即用。
+这个 fork 的当前 DMG 可从 [wuluoluoda/open-vibe-island releases](https://github.com/wuluoluoda/open-vibe-island/releases) 下载。该构建未签名，主要用于本地测试。
+
+如果需要上游已签名公证版本，请使用 [Octane0411/open-vibe-island releases](https://github.com/Octane0411/open-vibe-island/releases)。
 
 ### 方式二：Homebrew
 
@@ -124,10 +141,12 @@ brew install --cask octane0411/tap/openisland
 ### 方式三：从源码构建
 
 ```bash
-git clone https://github.com/Octane0411/open-vibe-island.git
+git clone https://github.com/wuluoluoda/open-vibe-island.git
 cd open-vibe-island
 open Package.swift   # 在 Xcode 中打开，点击 Run
 ```
+
+如果要构建原始上游项目，请 clone [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island)。
 
 首次启动时，Open Island 会自动发现活跃的 agent 会话并启动 live bridge。Hook 安装在 app 内的**设置**窗口管理。
 

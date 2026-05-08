@@ -13,14 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases/latest"><img src="https://img.shields.io/github/v/release/Octane0411/open-vibe-island?style=flat-square&label=release&color=blue" alt="Latest Release"></a>
-  <a href="https://github.com/Octane0411/open-vibe-island/stargazers"><img src="https://img.shields.io/github/stars/Octane0411/open-vibe-island?style=flat-square&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/wuluoluoda/open-vibe-island/releases/latest"><img src="https://img.shields.io/github/v/release/wuluoluoda/open-vibe-island?style=flat-square&label=fork%20build&color=blue" alt="Latest fork build"></a>
+  <a href="https://github.com/Octane0411/open-vibe-island"><img src="https://img.shields.io/badge/upstream-Octane0411%2Fopen--vibe--island-lightgrey?style=flat-square" alt="Upstream repository"></a>
   <a href="https://discord.gg/bPF2HpbCFb"><img src="https://img.shields.io/badge/discord-join-5865F2?style=flat-square&logo=discord" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL%20v3-green?style=flat-square" alt="License: GPL v3"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases">Download</a> ·
+  <a href="https://github.com/wuluoluoda/open-vibe-island/releases">Fork Builds</a> ·
+  <a href="https://github.com/Octane0411/open-vibe-island">Upstream</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
@@ -31,6 +32,20 @@
 </p>
 
 ---
+
+## Fork Notice
+
+This repository is a personal fork of [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island). It keeps the GPLv3 upstream foundation and focuses on a Codex-heavy workflow that I use locally.
+
+### What This Fork Adds
+
+- **Codex Desktop App radar** — a denser operational panel for live thread/turn state, reconnecting sessions, interrupted work, and loop hints.
+- **Codex artifact shelf** — a dedicated shelf for Codex-produced files and paths, with quick file actions from the island UI.
+- **More stable Codex session tracking** — row ordering, transient reconnects, stale interrupted states, completed-session expiry, and session labels have been tightened.
+- **Overlay behavior fixes** — hover recovery, directional shelf expansion, and panel height handling are tuned for long Codex sessions.
+- **Reviewable local workflow** — build checkpoint tags, tool-versioning notes, and broader tests document how this fork is packaged and rolled back.
+
+Download this fork's current DMG from [GitHub Releases](https://github.com/wuluoluoda/open-vibe-island/releases). The local build is currently unsigned, so macOS Gatekeeper may require right-clicking **Open** or removing quarantine after download.
 
 ## What is Open Island?
 
@@ -111,7 +126,9 @@ Think of it as an open-source [Vibe Island](https://vibeisland.app/) — **free,
 
 ### Option 1: Download
 
-Grab the latest DMG from [GitHub Releases](https://github.com/Octane0411/open-vibe-island/releases) — signed and notarized, ready to run.
+For this fork, download the current DMG from [wuluoluoda/open-vibe-island releases](https://github.com/wuluoluoda/open-vibe-island/releases). This build is unsigned and intended for local testing.
+
+For the upstream signed and notarized app, use [Octane0411/open-vibe-island releases](https://github.com/Octane0411/open-vibe-island/releases).
 
 ### Option 2: Homebrew
 
@@ -124,10 +141,12 @@ Upgrade later with `brew upgrade --cask openisland`.
 ### Option 3: Build from source
 
 ```bash
-git clone https://github.com/Octane0411/open-vibe-island.git
+git clone https://github.com/wuluoluoda/open-vibe-island.git
 cd open-vibe-island
 open Package.swift   # Opens in Xcode — hit Run
 ```
+
+To build the original upstream project instead, clone [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island).
 
 On first launch, Open Island auto-discovers your active agent sessions and starts the live bridge. Hook installation is managed from the **Settings** window inside the app.
 
