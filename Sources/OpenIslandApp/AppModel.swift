@@ -1198,12 +1198,16 @@ final class AppModel {
 
     func select(sessionID: String) {
         selectedSessionID = sessionID
+        prewarmJumpTargetsForSelectedSession()
     }
 
     // MARK: - Overlay forwarding
 
     func toggleOverlay() { overlay.toggleOverlay() }
-    func notchOpen(reason: NotchOpenReason, surface: IslandSurface = .sessionList()) { overlay.notchOpen(reason: reason, surface: surface) }
+    func notchOpen(reason: NotchOpenReason, surface: IslandSurface = .sessionList()) {
+        overlay.notchOpen(reason: reason, surface: surface)
+        prewarmJumpTargetsForVisibleSessions()
+    }
     func notchClose() { overlay.notchClose() }
     func notchPop() { overlay.notchPop() }
     func performBootAnimation() { overlay.performBootAnimation() }
@@ -1217,9 +1221,15 @@ final class AppModel {
     func refreshOverlayPlacement() { overlay.refreshOverlayPlacement() }
     private func refreshOverlayPlacementIfVisible() { overlay.refreshOverlayPlacementIfVisible() }
     func recoverOverlayInteractionAfterSystemChange() { overlay.recoverOverlayInteractionAfterSystemChange() }
-    func notePointerInsideIslandSurface() { overlay.notePointerInsideIslandSurface() }
+    func notePointerInsideIslandSurface() {
+        overlay.notePointerInsideIslandSurface()
+        prewarmJumpTargetsForVisibleSessions()
+    }
     func handlePointerExitedIslandSurface() { overlay.handlePointerExitedIslandSurface() }
-    private func presentNotificationSurface(_ surface: IslandSurface) { overlay.presentNotificationSurface(surface) }
+    private func presentNotificationSurface(_ surface: IslandSurface) {
+        overlay.presentNotificationSurface(surface)
+        prewarmJumpTargets(for: surface.sessionID)
+    }
     private func reconcileIslandSurfaceAfterStateChange() { overlay.reconcileIslandSurfaceAfterStateChange() }
     private func dismissNotificationSurfaceIfPresent(for sessionID: String) { overlay.dismissNotificationSurfaceIfPresent(for: sessionID) }
     private func dismissOverlayForJump() { overlay.dismissOverlayForJump() }
@@ -1297,16 +1307,49 @@ final class AppModel {
     }
 
     func jumpToFocusedSession() {
-        jump(to: focusedSession?.jumpTarget)
+        guard let session = focusedSession else {
+            jump(to: nil)
+            return
+        }
+
+        jump(to: monitoring.jumpTargetForClick(session))
     }
 
     func jumpToSession(_ session: AgentSession) {
-        guard let jumpTarget = session.jumpTarget,
+        guard let jumpTarget = monitoring.jumpTargetForClick(session),
               jumpTarget.terminalApp.lowercased() != "unknown" else {
             lastActionMessage = "Cannot jump: terminal app is unknown."
             return
         }
         jump(to: jumpTarget)
+    }
+
+    func prewarmJumpTargetsForVisibleSessions() {
+        let candidates = (surfacedSessions + [focusedSession].compactMap { $0 }).uniquedBySessionID()
+        monitoring.prewarmJumpTargets(for: candidates)
+    }
+
+    private func prewarmJumpTargetsForSelectedSession() {
+        guard let selectedSessionID,
+              let session = state.session(id: selectedSessionID) else {
+            return
+        }
+        monitoring.prewarmJumpTargets(for: [session])
+    }
+
+    private func prewarmJumpTargets(for sessionID: String?) {
+        guard let sessionID,
+              let session = state.session(id: sessionID) else {
+            return
+        }
+        monitoring.prewarmJumpTargets(for: [session])
+    }
+
+    private func prewarmJumpTargetsIfInteractionLikely(for event: AgentEvent, sessionID: String?) {
+        guard event.shouldPrewarmJumpTarget else {
+            return
+        }
+        prewarmJumpTargets(for: sessionID)
     }
 
     func openShelfItem(_ item: CodexShelfItem) {
@@ -1543,6 +1586,7 @@ final class AppModel {
         }
 
         state.apply(event)
+        prewarmJumpTargetsIfInteractionLikely(for: event, sessionID: eventSessionID)
         updateCodexShelf(for: event, sessionID: eventSessionID)
         updateLoopSignal(for: event, sessionID: eventSessionID)
         reconcileIslandSurfaceAfterStateChange()
@@ -1989,10 +2033,14 @@ final class AppModel {
     }
 
     private func synchronizeSelection() {
+        let previousSelectionID = selectedSessionID
         let surfacedIDs = Set(surfacedSessions.map(\.id))
 
         if let activeAction = state.activeActionableSession {
             selectedSessionID = activeAction.id
+            if selectedSessionID != previousSelectionID {
+                prewarmJumpTargetsForSelectedSession()
+            }
             return
         }
 
@@ -2000,6 +2048,9 @@ final class AppModel {
               surfacedIDs.contains(selectedSessionID),
               state.session(id: selectedSessionID) != nil else {
             self.selectedSessionID = surfacedSessions.first?.id ?? state.sessions.first?.id
+            if self.selectedSessionID != previousSelectionID {
+                prewarmJumpTargetsForSelectedSession()
+            }
             return
         }
     }
@@ -2227,6 +2278,30 @@ final class AppModel {
         NSApplication.shared.terminate(nil)
     }
 
+}
+
+private extension AgentEvent {
+    var shouldPrewarmJumpTarget: Bool {
+        switch self {
+        case let .sessionStarted(payload):
+            payload.initialPhase == .running || payload.initialPhase.requiresAttention
+        case let .activityUpdated(payload):
+            payload.phase == .running || payload.phase.requiresAttention
+        case .permissionRequested, .questionAsked:
+            true
+        default:
+            false
+        }
+    }
+}
+
+private extension Array where Element == AgentSession {
+    func uniquedBySessionID() -> [AgentSession] {
+        var seen = Set<String>()
+        return filter { session in
+            seen.insert(session.id).inserted
+        }
+    }
 }
 
 // MARK: - Hex color helpers

@@ -366,6 +366,9 @@ struct IslandPanelView: View {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
                 isHovering = hovering
             }
+            if hovering {
+                model.prewarmJumpTargetsForVisibleSessions()
+            }
         }
         .onTapGesture {
             if !isOpened {

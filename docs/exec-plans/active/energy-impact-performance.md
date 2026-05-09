@@ -23,6 +23,9 @@
 - Removed default Claude and Codex usage polling loops from startup.
 - Refresh usage data on demand when Settings or the opened island usage surface is shown, and when Codex usage is enabled.
 - Keep cached usage values while the usage UI is closed; setup and diagnostics flows still call the manual refresh methods.
+- Removed full jump-target precision resolution from the background monitor loop.
+- Added a short-lived warm jump-target cache that prewarms near island opening, hover, notifications, selection changes, and running/actionable events.
+- Clicks use a fresh cached target immediately, otherwise fall back to the latest known target and schedule a repair prewarm.
 
 ## Completed Slice: On-Demand Usage Refresh
 
@@ -35,7 +38,7 @@ Codex and Claude usage totals are useful context, but they are not part of the c
 - Use cached values while the usage UI is closed.
 - Preserve manual refresh behavior for setup or diagnostics flows.
 
-## Next Slice: Warm Jump Target Cache
+## Completed Slice: Warm Jump Target Cache
 
 Avoid moving all jump-target resolution to the exact click moment, because waiting 1-3 seconds on click is not acceptable. Instead:
 

@@ -45,8 +45,20 @@ final class ProcessMonitoringCoordinator {
     private var sessionAttachmentMonitorTask: Task<Void, Never>?
 
     @ObservationIgnored
+    private var jumpTargetPrewarmTask: Task<Void, Never>?
+
+    @ObservationIgnored
     private var wasCodexAppRunning = false
 
+    private struct CachedJumpTargetEntry: Equatable {
+        var target: JumpTarget
+        var resolvedAt: Date
+    }
+
+    @ObservationIgnored
+    private var jumpTargetCache: [String: CachedJumpTargetEntry] = [:]
+
+    nonisolated static let jumpTargetCacheTTL: TimeInterval = 30
     private static let cursorStalenessTimeout: TimeInterval = 600  // 10 minutes
 
     private var state: SessionState {
@@ -69,13 +81,11 @@ final class ProcessMonitoringCoordinator {
             while !Task.isCancelled {
                 let discovery = self.activeAgentProcessDiscovery
                 let probe = self.terminalSessionAttachmentProbe
-                let resolver = self.terminalJumpTargetResolver
                 let liveSessions = self.state.sessions.filter(\.isTrackedLiveSession)
-                let (snapshots, ghosttyAvail, terminalAvail, jumpTargets): (
+                let (snapshots, ghosttyAvail, terminalAvail): (
                     [ActiveProcessSnapshot],
                     GhosttyAvailability?,
-                    TerminalAvailability?,
-                    [String: JumpTarget]
+                    TerminalAvailability?
                 ) = await Task.detached(priority: .utility) {
                     let s = discovery.discover()
 
@@ -83,19 +93,17 @@ final class ProcessMonitoringCoordinator {
                         existingLiveSessions: liveSessions,
                         activeProcesses: s
                     ) else {
-                        return (s, nil, nil, [:])
+                        return (s, nil, nil)
                     }
 
                     let g: GhosttyAvailability? = probe.ghosttySnapshotAvailability()
                     let t: TerminalAvailability? = probe.terminalSnapshotAvailability()
-                    let j = resolver.resolveJumpTargets(for: liveSessions, activeProcesses: s)
-                    return (s, g, t, j)
+                    return (s, g, t)
                 }.value
                 self.reconcileSessionAttachments(
                     activeProcesses: snapshots,
                     ghosttyAvailability: ghosttyAvail,
-                    terminalAvailability: terminalAvail,
-                    preResolvedJumpTargets: jumpTargets
+                    terminalAvailability: terminalAvail
                 )
 
                 let nextLiveSessions = self.state.sessions.filter(\.isTrackedLiveSession)
@@ -218,16 +226,11 @@ final class ProcessMonitoringCoordinator {
             isCodexAppRunning: isCodexAppRunning
         )
 
-        // Resolve jump targets via the new focused resolver.
-        // When pre-resolved targets are provided (computed off-main-actor),
-        // use them directly to avoid blocking the main thread with AppleScript calls.
-        let resolverJumpTargets = preResolvedJumpTargets
-            ?? terminalJumpTargetResolver.resolveJumpTargets(
-                for: local.sessions.filter(\.isTrackedLiveSession),
-                activeProcesses: activeProcesses
-            )
-        if !resolverJumpTargets.isEmpty {
-            _ = local.reconcileJumpTargets(resolverJumpTargets)
+        // Full precision jump resolution is intentionally absent from this
+        // background path. Warm-cache prewarm calls handle it near interaction.
+        if let preResolvedJumpTargets, !preResolvedJumpTargets.isEmpty {
+            rememberJumpTargets(preResolvedJumpTargets, resolvedAt: Date())
+            _ = local.reconcileJumpTargets(preResolvedJumpTargets)
         }
 
         // Phase 4: remove sessions that are no longer visible.
@@ -253,6 +256,102 @@ final class ProcessMonitoringCoordinator {
         if resolutionReport.isAuthoritative {
             isResolvingInitialLiveSessions = false
         }
+        onSessionsReconciled?()
+        onPersistenceNeeded?()
+    }
+
+    // MARK: - Jump target warm cache
+
+    func prewarmJumpTargets(for sessions: [AgentSession]) {
+        let candidates = staleJumpTargetCandidates(from: sessions, now: Date())
+        guard !candidates.isEmpty, jumpTargetPrewarmTask == nil else {
+            return
+        }
+
+        let discovery = activeAgentProcessDiscovery
+        let resolver = terminalJumpTargetResolver
+
+        jumpTargetPrewarmTask = Task { @MainActor [weak self] in
+            let resolved = await Task.detached(priority: .utility) {
+                let activeProcesses = discovery.discover()
+                let updates = resolver.resolveJumpTargets(
+                    for: candidates,
+                    activeProcesses: activeProcesses
+                )
+                let resolvedAt = Date()
+                let cacheTargets = candidates.reduce(into: [String: JumpTarget]()) { partialResult, session in
+                    if let update = updates[session.id] {
+                        partialResult[session.id] = update
+                    } else if let jumpTarget = session.jumpTarget {
+                        partialResult[session.id] = jumpTarget
+                    }
+                }
+                return (updates: updates, cacheTargets: cacheTargets, resolvedAt: resolvedAt)
+            }.value
+
+            guard let self else {
+                return
+            }
+
+            self.jumpTargetPrewarmTask = nil
+            self.rememberJumpTargets(resolved.cacheTargets, resolvedAt: resolved.resolvedAt)
+            self.applyPrewarmedJumpTargets(resolved.updates)
+        }
+    }
+
+    func jumpTargetForClick(_ session: AgentSession, now: Date = Date()) -> JumpTarget? {
+        if let cached = cachedJumpTarget(for: session.id, now: now) {
+            return cached
+        }
+
+        prewarmJumpTargets(for: [session])
+        return session.jumpTarget ?? jumpTargetCache[session.id]?.target
+    }
+
+    func cacheJumpTarget(_ target: JumpTarget, for sessionID: String, resolvedAt: Date) {
+        jumpTargetCache[sessionID] = CachedJumpTargetEntry(target: target, resolvedAt: resolvedAt)
+    }
+
+    func cachedJumpTarget(for sessionID: String, now: Date = Date()) -> JumpTarget? {
+        guard let entry = jumpTargetCache[sessionID],
+              Self.cachedJumpTargetIsFresh(resolvedAt: entry.resolvedAt, now: now) else {
+            return nil
+        }
+        return entry.target
+    }
+
+    nonisolated static func cachedJumpTargetIsFresh(
+        resolvedAt: Date,
+        now: Date,
+        ttl: TimeInterval = jumpTargetCacheTTL
+    ) -> Bool {
+        now.timeIntervalSince(resolvedAt) <= ttl
+    }
+
+    private func staleJumpTargetCandidates(from sessions: [AgentSession], now: Date) -> [AgentSession] {
+        sessions.filter { session in
+            session.isTrackedLiveSession
+                && cachedJumpTarget(for: session.id, now: now) == nil
+        }
+    }
+
+    private func rememberJumpTargets(_ jumpTargets: [String: JumpTarget], resolvedAt: Date) {
+        for (sessionID, jumpTarget) in jumpTargets {
+            cacheJumpTarget(jumpTarget, for: sessionID, resolvedAt: resolvedAt)
+        }
+    }
+
+    private func applyPrewarmedJumpTargets(_ jumpTargets: [String: JumpTarget]) {
+        guard !jumpTargets.isEmpty else {
+            return
+        }
+
+        var local = state
+        guard local.reconcileJumpTargets(jumpTargets) else {
+            return
+        }
+
+        state = local
         onSessionsReconciled?()
         onPersistenceNeeded?()
     }
