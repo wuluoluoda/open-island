@@ -91,4 +91,21 @@ struct AppModelPersistenceScopeTests {
 
         #expect(AppModel.persistenceScopes(for: event, session: nil).isEmpty)
     }
+
+    @Test
+    func unchangedEventsDoNotSchedulePersistence() {
+        let event = AgentEvent.sessionStarted(SessionStarted(
+            sessionID: "codex",
+            title: "Codex",
+            tool: .codex,
+            summary: "Running",
+            timestamp: Date(timeIntervalSince1970: 1_000)
+        ))
+
+        #expect(AppModel.persistenceScopes(
+            for: event,
+            session: nil,
+            stateChanged: false
+        ).isEmpty)
+    }
 }

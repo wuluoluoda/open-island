@@ -1615,7 +1615,8 @@ final class AppModel {
             scheduleSessionPersistence(
                 Self.persistenceScopes(
                     for: event,
-                    session: eventSessionID.flatMap { state.session(id: $0) }
+                    session: eventSessionID.flatMap { state.session(id: $0) },
+                    stateChanged: true
                 )
             )
         }
@@ -1641,8 +1642,13 @@ final class AppModel {
 
     nonisolated static func persistenceScopes(
         for event: AgentEvent,
-        session: AgentSession?
+        session: AgentSession?,
+        stateChanged: Bool = true
     ) -> Set<SessionPersistenceScope> {
+        guard stateChanged else {
+            return []
+        }
+
         switch event {
         case let .sessionStarted(payload):
             return persistenceScopes(for: payload.tool)
