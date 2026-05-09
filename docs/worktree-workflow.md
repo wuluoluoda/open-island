@@ -124,6 +124,12 @@ git push origin --delete <branch-name>
 - If a worktree becomes exploratory rather than shippable, rename the branch into `investigate/<topic>` or close it.
 - When assigning work to multiple agents, split by file ownership or subsystem, not by vague goal.
 
+## Related Project Skill
+
+This repository's dev/main promotion workflow and local Dev app verification steps are maintained in the project skill:
+
+- `.codex/skills/open-island-workflow/SKILL.md`
+
 ## Suggested Workstream Layout
 
 Good parallel split:

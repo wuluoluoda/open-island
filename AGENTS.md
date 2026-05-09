@@ -59,7 +59,7 @@ Keep all work incremental, reviewable, and reversible. Every meaningful round of
 - All PRs must target `main`. Do not chain PRs through another feature branch unless the user explicitly requests that structure.
 
 See [docs/worktree-workflow.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/docs/worktree-workflow.md) for the concrete commands and lifecycle.
-See [docs/tool-versioning.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/docs/tool-versioning.md) for the local runtime, tag, and rollback workflow.
+See [.codex/skills/open-island-workflow/SKILL.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-workflow/SKILL.md) for the local runtime, tag, and dev/main promotion workflow.
 
 ## Product Boundaries
 
