@@ -36,13 +36,13 @@ For work intended for `main`, prefer `origin/main`:
 
 ```bash
 git fetch --all --prune
-git worktree add -b fix/<topic> ../code.app.org-<topic> origin/main
+git worktree add -b fix/<topic> ../open-vibe-island-<topic> origin/main
 ```
 
 For a bug that exists in the currently running local dev app, branch from the current local testing branch:
 
 ```bash
-git worktree add -b fix/<topic> ../code.app.org-<topic> dev
+git worktree add -b fix/<topic> ../open-vibe-island-<topic> dev
 ```
 
 Say which base you chose and why. This avoids the confusion where a fix exists on an unrelated branch but the app the user is running never receives it.
@@ -72,7 +72,7 @@ Keep unrelated changes in separate commits.
 When the user asks to use a fix in the current app, integrate it into `dev` unless they specify another branch.
 
 ```bash
-cd /Users/wuluoluo/work/code.app.org
+cd /Users/wuluoluo/work/code.app.org/open-vibe-island
 git status -sb
 git merge --ff-only <topic-branch>
 ```

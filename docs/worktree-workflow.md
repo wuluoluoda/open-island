@@ -13,7 +13,7 @@ This repository should use Git worktrees as the default shape for development.
 
 ### 1. Local testing worktree
 
-- Path: `/Users/wuluoluo/work/code.app.org`
+- Path: `/Users/wuluoluo/work/code.app.org/open-vibe-island`
 - Branch: `dev`
 - Purpose: run and verify the current local Dev app
 
@@ -25,7 +25,7 @@ Rules:
 
 ### 2. Topic worktrees
 
-- Path pattern: `/Users/wuluoluo/work/code.app.org-<topic>`
+- Path pattern: `/Users/wuluoluo/work/code.app.org/open-vibe-island-<topic>`
 - Branch pattern: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, `investigate/<topic>`
 - Purpose: isolated implementation for one slice
 
@@ -44,20 +44,20 @@ From the local testing worktree, or any clean checkout:
 
 ```bash
 git fetch origin
-git worktree add /Users/wuluoluo/work/code.app.org-<topic> -b <branch-name> origin/main
+git worktree add /Users/wuluoluo/work/code.app.org/open-vibe-island-<topic> -b <branch-name> origin/main
 ```
 
 Example:
 
 ```bash
 git fetch origin
-git worktree add /Users/wuluoluo/work/code.app.org-island-polish -b feat/island-polish origin/main
+git worktree add /Users/wuluoluo/work/code.app.org/open-vibe-island-island-polish -b feat/island-polish origin/main
 ```
 
 If the bug exists in the current local testing branch rather than `origin/main`, branch from that testing branch and state that choice:
 
 ```bash
-git worktree add /Users/wuluoluo/work/code.app.org-row-jump -b fix/row-jump dev
+git worktree add /Users/wuluoluo/work/code.app.org/open-vibe-island-row-jump -b fix/row-jump dev
 ```
 
 ## Work inside the topic worktree
@@ -106,7 +106,7 @@ git pull --ff-only origin main
 After the topic branch is merged:
 
 ```bash
-git worktree remove /Users/wuluoluo/work/code.app.org-<topic>
+git worktree remove /Users/wuluoluo/work/code.app.org/open-vibe-island-<topic>
 git branch -d <branch-name>
 ```
 
