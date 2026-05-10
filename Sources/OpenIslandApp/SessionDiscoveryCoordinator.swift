@@ -411,12 +411,11 @@ final class SessionDiscoveryCoordinator {
     private var lastCodexAppRescanDate: Date = .distantPast
 
     /// Re-scan `~/.codex/sessions/` for rollout files not yet tracked.
-    /// Called periodically when Codex.app is running as a fallback when
-    /// the app-server connection is unavailable.  Throttled to at most
-    /// once per 10 seconds.
-    func rediscoverCodexAppSessionsIfNeeded() {
+    /// Called when Codex.app needs rollout-file fallback discovery because the
+    /// app-server connection is unavailable or did not return enough state.
+    func rediscoverCodexAppSessionsIfNeeded(minimumInterval: TimeInterval = 10) {
         let now = Date.now
-        guard now.timeIntervalSince(lastCodexAppRescanDate) >= 10 else { return }
+        guard now.timeIntervalSince(lastCodexAppRescanDate) >= minimumInterval else { return }
         lastCodexAppRescanDate = now
 
         let discovery = codexRolloutDiscovery
