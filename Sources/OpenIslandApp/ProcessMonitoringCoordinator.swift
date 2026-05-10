@@ -36,6 +36,12 @@ final class ProcessMonitoringCoordinator {
     @ObservationIgnored
     var onCodexAppRunningChanged: ((_ isRunning: Bool) -> Void)?
 
+    /// Fires on monitor ticks where Codex.app is currently running so the app
+    /// layer can keep low-cost fallback discovery alive without tying it to
+    /// terminal snapshot probing.
+    @ObservationIgnored
+    var onCodexAppRunningObserved: (() -> Void)?
+
     @ObservationIgnored
     let activeAgentProcessDiscovery = ActiveAgentProcessDiscovery()
 
@@ -229,6 +235,9 @@ final class ProcessMonitoringCoordinator {
         if isCodexAppRunning != wasCodexAppRunning {
             wasCodexAppRunning = isCodexAppRunning
             onCodexAppRunningChanged?(isCodexAppRunning)
+        }
+        if isCodexAppRunning {
+            onCodexAppRunningObserved?()
         }
 
         let sessions = local.sessions.filter(\.isTrackedLiveSession)

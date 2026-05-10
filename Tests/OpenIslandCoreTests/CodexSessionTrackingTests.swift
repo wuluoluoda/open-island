@@ -762,6 +762,53 @@ struct CodexSessionTrackingTests {
         #expect(records.first?.origin == .live)
         #expect(records.first?.attachmentState == .stale)
     }
+
+    @Test
+    func codexRolloutDiscoveryMarksDesktopOriginatorWithAppJumpTarget() throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("open-island-desktop-discovery-\(UUID().uuidString)", isDirectory: true)
+        let directoryURL = rootURL.appendingPathComponent("2026/05/10", isDirectory: true)
+        let rolloutURL = directoryURL.appendingPathComponent("rollout-desktop.jsonl")
+        let now = Date(timeIntervalSince1970: 1_778_386_800)
+
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let lines = [
+            sessionMetaLine(
+                sessionID: "codex-desktop-session",
+                timestamp: "2026-05-10T04:20:00.000Z",
+                cwd: "/Users/wuluoluo/work/code.app.org/open-vibe-island",
+                originator: "Codex Desktop"
+            ),
+            rolloutLine(
+                timestamp: "2026-05-10T04:20:01.000Z",
+                type: "event_msg",
+                payload: [
+                    "type": "user_message",
+                    "message": "Fix desktop detection.",
+                ]
+            ),
+        ]
+        try lines.joined(separator: "\n").appending("\n").write(to: rolloutURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: rolloutURL.path)
+
+        let discovery = CodexRolloutDiscovery(
+            rootURL: rootURL,
+            fileManager: .default,
+            maxAge: 86_400,
+            maxFiles: 10
+        )
+
+        let records = discovery.discoverRecentSessions(now: now)
+
+        #expect(records.count == 1)
+        #expect(records.first?.jumpTarget?.terminalApp == "Codex.app")
+        #expect(records.first?.jumpTarget?.codexThreadID == "codex-desktop-session")
+        #expect(records.first?.session.isCodexAppSession == true)
+    }
 }
 
 private actor EventRecorder {
@@ -807,7 +854,9 @@ private func rolloutLine(
 private func sessionMetaLine(
     sessionID: String,
     timestamp: String,
-    cwd: String
+    cwd: String,
+    originator: String = "codex-tui",
+    source: String = "cli"
 ) -> String {
     rolloutLine(
         timestamp: timestamp,
@@ -816,8 +865,8 @@ private func sessionMetaLine(
             "id": sessionID,
             "timestamp": timestamp,
             "cwd": cwd,
-            "originator": "codex-tui",
-            "source": "cli",
+            "originator": originator,
+            "source": source,
         ]
     )
 }

@@ -34,13 +34,26 @@ struct SessionDiscoveryCoordinatorTests {
     }
 
     @Test
-    func codexRolloutTargetsSkipCodexAppSessions() {
+    func codexRolloutTargetsAllowCodexAppSessionsWhenRealtimeIsStale() {
         var session = codexSession(id: "app", transcriptPath: "/tmp/app.jsonl")
         session.isCodexAppSession = true
 
         let targets = SessionDiscoveryCoordinator.codexRolloutWatchTargets(
             for: [session],
             healthyRealtimeCodexSessionIDs: []
+        )
+
+        #expect(targets.map(\.sessionID) == ["app"])
+    }
+
+    @Test
+    func codexRolloutTargetsSkipCodexAppSessionsWhenRealtimeIsHealthy() {
+        var session = codexSession(id: "app", transcriptPath: "/tmp/app.jsonl")
+        session.isCodexAppSession = true
+
+        let targets = SessionDiscoveryCoordinator.codexRolloutWatchTargets(
+            for: [session],
+            healthyRealtimeCodexSessionIDs: ["app"]
         )
 
         #expect(targets.isEmpty)

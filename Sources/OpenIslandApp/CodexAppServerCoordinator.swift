@@ -34,6 +34,11 @@ final class CodexAppServerCoordinator {
     @ObservationIgnored
     var onStatusMessage: ((String) -> Void)?
 
+    /// Requests the rollout-file fallback path when app-server cannot provide
+    /// a useful current-thread snapshot.
+    @ObservationIgnored
+    var onFallbackRefreshNeeded: (() -> Void)?
+
     /// Fires when connection lifecycle changes (connecting/reconnecting/etc).
     @ObservationIgnored
     var onConnectionStateChanged: ((RuntimeConnectionState) -> Void)?
@@ -151,15 +156,40 @@ final class CodexAppServerCoordinator {
             if created > 0 {
                 onStatusMessage?("Synced \(created) new Codex thread(s) from app-server.")
             }
+            if threads.isEmpty || created == 0 {
+                onFallbackRefreshNeeded?()
+            }
         } catch {
             onStatusMessage?("Failed to list current Codex threads: \(error.localizedDescription)")
+            onFallbackRefreshNeeded?()
             handleConnectionLossIfNeeded(reason: "Codex app-server sync failed. Reconnecting…")
         }
     }
 
     private func currentThreads(from client: CodexAppServerClient) async throws -> [CodexThread] {
-        let loadedThreads = try await client.listLoadedThreads()
-        let allThreads = (try? await client.listThreads(limit: 120)) ?? []
+        var firstError: Error?
+        let loadedThreads: [CodexThread]
+        do {
+            loadedThreads = try await client.listLoadedThreads()
+        } catch {
+            loadedThreads = []
+            firstError = error
+        }
+
+        let allThreads: [CodexThread]
+        do {
+            allThreads = try await client.listThreads(limit: 120)
+        } catch {
+            allThreads = []
+            if firstError == nil {
+                firstError = error
+            }
+        }
+
+        if loadedThreads.isEmpty, allThreads.isEmpty, let firstError {
+            throw firstError
+        }
+
         var threadsByID: [String: CodexThread] = [:]
 
         for thread in loadedThreads where !thread.ephemeral {

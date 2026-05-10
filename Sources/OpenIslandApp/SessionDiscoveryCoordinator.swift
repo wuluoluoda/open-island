@@ -394,12 +394,6 @@ final class SessionDiscoveryCoordinator {
                   !transcriptPath.isEmpty else {
                 return nil
             }
-            // Codex.app sessions already get their lifecycle from hooks
-            // (and eventually app-server). The rollout watcher would
-            // duplicate completion notifications and is not needed.
-            if session.isCodexAppSession {
-                return nil
-            }
             if healthyRealtimeCodexSessionIDs.contains(session.id) {
                 return nil
             }
@@ -436,6 +430,9 @@ final class SessionDiscoveryCoordinator {
     }
 
     private func applyCodexAppRediscovery(_ records: [CodexTrackedSessionRecord]) {
+        let records = records.filter { $0.jumpTarget?.terminalApp == "Codex.app" }
+        guard !records.isEmpty else { return }
+
         let existingIDs = Set(state.sessions.filter { $0.tool == .codex }.map(\.id))
         let existingPaths = Set(state.sessions.compactMap(\.codexMetadata?.transcriptPath))
 
@@ -443,7 +440,6 @@ final class SessionDiscoveryCoordinator {
             !existingIDs.contains(record.sessionID)
                 && (record.codexMetadata?.transcriptPath).map { !existingPaths.contains($0) } ?? true
         }
-        guard !records.isEmpty else { return }
 
         let discoveredSessions = records.map { record -> AgentSession in
             var session = record.session
@@ -468,7 +464,12 @@ final class SessionDiscoveryCoordinator {
         }
 
         let merged = mergeDiscoveredSessions(discoveredSessions)
-        state = SessionState(sessions: merged)
+        let nextState = SessionState(sessions: merged)
+        guard nextState != state else {
+            return
+        }
+
+        state = nextState
         refreshCodexRolloutTracking()
         scheduleCodexSessionPersistence()
         if !newRecords.isEmpty {

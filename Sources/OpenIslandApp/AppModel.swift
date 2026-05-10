@@ -834,6 +834,9 @@ final class AppModel {
         codexAppServer.onStatusMessage = { [weak self] message in
             self?.lastActionMessage = message
         }
+        codexAppServer.onFallbackRefreshNeeded = { [weak self] in
+            self?.discovery.rediscoverCodexAppSessionsIfNeeded()
+        }
         codexAppServer.onConnectionStateChanged = { [weak self] _ in
             self?._cachedSessionBuckets = nil
             self?.refreshOverlayPlacementIfVisible()
@@ -859,9 +862,15 @@ final class AppModel {
             guard let self else { return }
             if isRunning {
                 self.codexAppServer.ensureConnected()
+                self.discovery.rediscoverCodexAppSessionsIfNeeded()
             } else {
                 self.codexAppServer.disconnect()
             }
+        }
+        monitoring.onCodexAppRunningObserved = { [weak self] in
+            guard let self else { return }
+            self.codexAppServer.ensureConnected()
+            self.discovery.rediscoverCodexAppSessionsIfNeeded()
         }
 
         refreshOverlayDisplayConfiguration()
