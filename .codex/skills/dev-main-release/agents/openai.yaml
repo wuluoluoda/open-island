@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Main Release"
+  short_description: "Promote dev to main and ship GitHub DMG"
+  default_prompt: "Use $dev-main-release to promote dev to main, push the release, and verify the GitHub DMG."
