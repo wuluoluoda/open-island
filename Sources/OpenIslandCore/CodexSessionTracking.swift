@@ -1270,7 +1270,23 @@ private func codexRolloutParseTimestamp(_ string: String?) -> Date? {
         return nil
     }
 
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return formatter.date(from: string)
+    return CodexRolloutTimestampParser.date(from: string)
+}
+
+private enum CodexRolloutTimestampParser {
+    private static let lock = NSLock()
+    // ISO8601DateFormatter is not Sendable, but all access is serialized by
+    // `lock`; this avoids rebuilding ICU formatter state for every rollout row.
+    nonisolated(unsafe)
+    private static let formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static func date(from string: String) -> Date? {
+        lock.lock()
+        defer { lock.unlock() }
+        return formatter.date(from: string)
+    }
 }

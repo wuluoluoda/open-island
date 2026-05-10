@@ -780,7 +780,10 @@ final class AppModel {
             self?.lastActionMessage = message
         }
         codexAppServer.onFallbackRefreshNeeded = { [weak self] in
-            self?.discovery.rediscoverCodexAppSessionsIfNeeded()
+            guard let self else { return }
+            self.discovery.rediscoverCodexAppSessionsIfNeeded(
+                minimumInterval: self.codexAppRediscoveryInterval
+            )
         }
         codexAppServer.onConnectionStateChanged = { [weak self] _ in
             self?._cachedSessionBuckets = nil
@@ -807,7 +810,11 @@ final class AppModel {
             guard let self else { return }
             if isRunning {
                 self.codexAppServer.ensureConnected()
-                self.discovery.rediscoverCodexAppSessionsIfNeeded()
+                if !self.codexAppServer.isConnected {
+                    self.discovery.rediscoverCodexAppSessionsIfNeeded(
+                        minimumInterval: self.codexAppRediscoveryInterval
+                    )
+                }
             } else {
                 self.codexAppServer.disconnect()
             }
@@ -815,7 +822,12 @@ final class AppModel {
         monitoring.onCodexAppRunningObserved = { [weak self] in
             guard let self else { return }
             self.codexAppServer.ensureConnected()
-            self.discovery.rediscoverCodexAppSessionsIfNeeded()
+            guard !self.codexAppServer.isConnected else {
+                return
+            }
+            self.discovery.rediscoverCodexAppSessionsIfNeeded(
+                minimumInterval: self.codexAppRediscoveryInterval
+            )
         }
 
         refreshOverlayDisplayConfiguration()
@@ -1882,6 +1894,14 @@ final class AppModel {
         case .quiet: 120
         case .balanced: 30
         case .responsive: 0
+        }
+    }
+
+    private var codexAppRediscoveryInterval: TimeInterval {
+        switch codexRolloutFallbackProfile {
+        case .quiet: 120
+        case .balanced: 30
+        case .responsive: 10
         }
     }
 
