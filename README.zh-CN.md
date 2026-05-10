@@ -115,6 +115,7 @@ Open Island 驻留在 Mac 的**刘海区域**（或顶部栏），为你的 AI c
 | 通知音效 | 可配置系统音效、静音切换 |
 | 国际化 | English、简体中文 |
 | 会话发现 | 从本地 transcript 自动发现，跨启动持久化 |
+| 能耗模式 | 设置页能耗控制：降低空闲轮询、按需刷新用量，并对 Codex rollout fallback 做实时通道健康门控 |
 | 自动更新 | 基于 Sparkle 的自动更新 |
 | 签名公证 | DMG 打包，Apple 公证 |
 

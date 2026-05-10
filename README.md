@@ -115,6 +115,7 @@ Think of it as an open-source [Vibe Island](https://vibeisland.app/) — **free,
 | Notification sounds | Configurable system sounds, mute toggle |
 | i18n | English, Simplified Chinese |
 | Session discovery | Auto-discover from local transcripts, persist across launches |
+| Energy profiles | Settings-only energy controls for quiet polling, on-demand usage refresh, and gated Codex rollout fallback |
 | Auto-update | Sparkle-based automatic updates |
 | Signed & notarized | DMG packaging with Apple notarization |
 
