@@ -156,7 +156,7 @@ final class CodexAppServerCoordinator {
             if created > 0 {
                 onStatusMessage?("Synced \(created) new Codex thread(s) from app-server.")
             }
-            if threads.isEmpty || created == 0 {
+            if threads.isEmpty {
                 onFallbackRefreshNeeded?()
             }
         } catch {
