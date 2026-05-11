@@ -124,6 +124,28 @@ struct SessionDiscoveryCoordinatorTests {
             currentPhase: .waitingForAnswer
         ))
     }
+
+    @Test
+    func codexAppSyncCompletesRunningThreadWhenServerReportsIdle() throws {
+        let idle = try codexStatus(type: "idle")
+
+        #expect(CodexAppServerCoordinator.shouldEmitSyncedStatusUpdate(
+            idle,
+            currentPhase: .running
+        ))
+        #expect(CodexAppServerCoordinator.shouldEmitSyncedStatusUpdate(
+            idle,
+            currentPhase: .waitingForApproval
+        ))
+        #expect(!CodexAppServerCoordinator.shouldEmitSyncedStatusUpdate(
+            idle,
+            currentPhase: .completed
+        ))
+        #expect(!CodexAppServerCoordinator.shouldEmitSyncedStatusUpdate(
+            idle,
+            currentPhase: nil
+        ))
+    }
 }
 
 private func codexSession(id: String, transcriptPath: String) -> AgentSession {

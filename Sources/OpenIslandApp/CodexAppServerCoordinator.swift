@@ -331,7 +331,12 @@ final class CodexAppServerCoordinator {
         _ status: CodexThreadStatus,
         currentPhase: SessionPhase?
     ) -> Bool {
-        guard status.type == .active else {
+        switch status.type {
+        case .active:
+            break
+        case .idle:
+            return currentPhase != nil && currentPhase != .completed
+        case .notLoaded, .systemError:
             return false
         }
 
