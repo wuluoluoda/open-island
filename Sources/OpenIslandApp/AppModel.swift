@@ -1785,10 +1785,6 @@ final class AppModel {
                 wasAlreadyCompleted: wasAlreadyCompleted,
                 ingress: ingress
             )
-        } else if case let .sessionCompleted(payload) = event {
-            NotificationDebugLog.write(
-                "notification skipped reason=noSurfaceForCompletion sessionID=\(payload.sessionID) interrupt=\(payload.isInterrupt == true) ingress=\(ingress)"
-            )
         }
     }
 
@@ -1940,65 +1936,38 @@ final class AppModel {
         ingress: TrackedEventIngress
     ) {
         guard !wasAlreadyCompleted else {
-            NotificationDebugLog.write(
-                "notification skipped reason=alreadyCompleted surface=\(surface) ingress=\(ingress)"
-            )
             return
         }
 
         guard let sessionID = surface.sessionID else {
-            NotificationDebugLog.write(
-                "notification skipped reason=missingSessionID surface=\(surface) ingress=\(ingress)"
-            )
             return
         }
 
         guard let session = state.session(id: sessionID) else {
-            NotificationDebugLog.write(
-                "notification skipped reason=missingSession sessionID=\(sessionID) surface=\(surface) ingress=\(ingress)"
-            )
             return
         }
 
         guard !shouldSuppressNotificationDuringInitialResolution(for: session, ingress: ingress) else {
-            NotificationDebugLog.write(
-                "notification skipped reason=initialResolution sessionID=\(sessionID) phase=\(session.phase) attachment=\(session.attachmentState) codexApp=\(session.isCodexAppSession) processAlive=\(session.isProcessAlive) ingress=\(ingress)"
-            )
             return
         }
 
         guard surface.matchesCurrentState(of: session) else {
-            NotificationDebugLog.write(
-                "notification skipped reason=stateMismatch sessionID=\(sessionID) phase=\(session.phase) ingress=\(ingress) surface=\(surface)"
-            )
             return
         }
 
-        NotificationDebugLog.write(
-            "notification accepted sessionID=\(sessionID) phase=\(session.phase) ingress=\(ingress) status=\(notchStatus) reason=\(String(describing: notchOpenReason)) muted=\(isSoundMuted)"
-        )
         playNotificationSound()
 
         if session.phase == .completed {
-            NotificationDebugLog.write(
-                "notification present immediate reason=completed sessionID=\(sessionID)"
-            )
             presentNotificationSurface(surface, playSound: false)
             return
         }
 
         guard notificationSurfaceCanOpenOverCurrentIslandState() else {
-            NotificationDebugLog.write(
-                "notification skipped reason=overlayBusy sessionID=\(sessionID) status=\(notchStatus) reason=\(String(describing: notchOpenReason))"
-            )
             return
         }
 
         guard suppressFrontmostNotifications,
               session.phase != .completed else {
-            NotificationDebugLog.write(
-                "notification present immediate reason=noFrontmostSuppression sessionID=\(sessionID) phase=\(session.phase)"
-            )
             presentNotificationSurface(surface, playSound: false)
             return
         }
@@ -2011,27 +1980,15 @@ final class AppModel {
 
             let shouldSuppress = await self.isNotificationSessionAlreadyFrontmost(session)
             guard !Task.isCancelled else {
-                NotificationDebugLog.write(
-                    "notification skipped reason=taskCancelled sessionID=\(sessionID)"
-                )
                 return
             }
             guard !shouldSuppress else {
-                NotificationDebugLog.write(
-                    "notification skipped reason=frontmost sessionID=\(sessionID)"
-                )
                 return
             }
             guard self.notificationSurfaceIsEligibleForPresentation(surface, ingress: ingress) else {
-                NotificationDebugLog.write(
-                    "notification skipped reason=asyncIneligible sessionID=\(sessionID) status=\(self.notchStatus) reason=\(String(describing: self.notchOpenReason))"
-                )
                 return
             }
 
-            NotificationDebugLog.write(
-                "notification present delayed sessionID=\(sessionID)"
-            )
             self.presentNotificationSurface(surface, playSound: false)
         }
     }
