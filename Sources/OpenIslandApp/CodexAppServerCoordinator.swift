@@ -352,10 +352,21 @@ final class CodexAppServerCoordinator {
     }
 
     private func emitStatusUpdate(_ status: CodexThreadStatus, for threadId: String) {
+        guard let event = Self.syncedStatusEvent(status, for: threadId, timestamp: .now) else {
+            return
+        }
+        onEvent?(event)
+    }
+
+    nonisolated static func syncedStatusEvent(
+        _ status: CodexThreadStatus,
+        for threadId: String,
+        timestamp: Date
+    ) -> AgentEvent? {
         switch status.type {
         case .active:
             if status.isWaitingOnApproval {
-                onEvent?(.permissionRequested(
+                return .permissionRequested(
                     PermissionRequested(
                         sessionID: threadId,
                         request: PermissionRequest(
@@ -363,43 +374,43 @@ final class CodexAppServerCoordinator {
                             summary: "Codex is waiting for approval.",
                             affectedPath: ""
                         ),
-                        timestamp: .now
+                        timestamp: timestamp
                     )
-                ))
+                )
             } else if status.isWaitingOnUserInput {
-                onEvent?(.questionAsked(
+                return .questionAsked(
                     QuestionAsked(
                         sessionID: threadId,
                         prompt: QuestionPrompt(
                             title: "Codex is waiting for input.",
                             options: []
                         ),
-                        timestamp: .now
+                        timestamp: timestamp
                     )
-                ))
+                )
             } else {
-                onEvent?(.activityUpdated(
+                return .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: threadId,
                         summary: "Codex is working…",
                         phase: .running,
-                        timestamp: .now
+                        timestamp: timestamp
                     )
-                ))
+                )
             }
         case .idle:
             // Idle means "between turns" in the same thread — the thread is
             // still open. Only `thread/closed` truly ends a session.
-            onEvent?(.activityUpdated(
-                SessionActivityUpdated(
+            return .sessionCompleted(
+                SessionCompleted(
                     sessionID: threadId,
-                    summary: "Idle.",
-                    phase: .completed,
-                    timestamp: .now
+                    summary: "Turn completed.",
+                    timestamp: timestamp,
+                    isSessionEnd: false
                 )
-            ))
+            )
         case .notLoaded, .systemError:
-            break
+            return nil
         }
     }
 

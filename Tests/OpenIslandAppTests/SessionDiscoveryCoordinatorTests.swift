@@ -146,6 +146,27 @@ struct SessionDiscoveryCoordinatorTests {
             currentPhase: nil
         ))
     }
+
+    @Test
+    func codexAppIdleSyncUsesCompletionNotificationEvent() throws {
+        let idle = try codexStatus(type: "idle")
+        let timestamp = Date(timeIntervalSince1970: 2_000)
+        let event = CodexAppServerCoordinator.syncedStatusEvent(
+            idle,
+            for: "thread-1",
+            timestamp: timestamp
+        )
+
+        guard case let .sessionCompleted(payload) = event else {
+            Issue.record("Expected idle sync to emit sessionCompleted.")
+            return
+        }
+
+        #expect(payload.sessionID == "thread-1")
+        #expect(payload.summary == "Turn completed.")
+        #expect(payload.timestamp == timestamp)
+        #expect(payload.isSessionEnd == false)
+    }
 }
 
 private func codexSession(id: String, transcriptPath: String) -> AgentSession {
