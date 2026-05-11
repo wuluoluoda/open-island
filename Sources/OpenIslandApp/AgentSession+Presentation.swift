@@ -301,11 +301,33 @@ extension AgentSession {
 
         let label = currentToolDisplayName(for: currentTool)
         guard let preview = currentCommandPreviewText?.trimmedForSurface,
-              !preview.isEmpty else {
+              shouldShowCommandPreview(preview) else {
             return label
         }
 
         return "\(label) \(preview)"
+    }
+
+    private func shouldShowCommandPreview(_ preview: String) -> Bool {
+        guard !preview.isEmpty,
+              preview.count <= 48 else {
+            return false
+        }
+
+        let complexShellMarkers = [
+            "<<",
+            "\n",
+            "&&",
+            "||",
+            ";",
+            "node -",
+            "python -",
+            "ruby -",
+            "perl -",
+        ]
+
+        let normalized = preview.lowercased()
+        return !complexShellMarkers.contains { normalized.contains($0) }
     }
 
     private func currentToolDisplayName(for toolName: String) -> String {
