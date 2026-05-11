@@ -93,6 +93,48 @@ struct SessionDiscoveryCoordinatorTests {
     }
 
     @Test
+    func codexAppSyncIncludesTrackedIdleThreadFromAllThreads() throws {
+        let idle = try codexThread(id: "tracked", status: "idle", updatedAt: 1_950)
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [],
+            allThreads: [idle],
+            isSessionTracked: { $0 == "tracked" }
+        )
+
+        #expect(threads.map(\.id) == ["tracked"])
+        #expect(threads.first?.status.type == .idle)
+    }
+
+    @Test
+    func codexAppSyncSkipsUntrackedIdleThreadFromAllThreads() throws {
+        let idle = try codexThread(id: "untracked", status: "idle", updatedAt: 1_950)
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [],
+            allThreads: [idle],
+            isSessionTracked: { _ in false }
+        )
+
+        #expect(threads.isEmpty)
+    }
+
+    @Test
+    func codexAppSyncDoesNotReplaceNewerLoadedActiveWithOlderIdle() throws {
+        let active = try codexThread(id: "tracked", status: "active", updatedAt: 2_000)
+        let olderIdle = try codexThread(id: "tracked", status: "idle", updatedAt: 1_950)
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [active],
+            allThreads: [olderIdle],
+            isSessionTracked: { $0 == "tracked" }
+        )
+
+        #expect(threads.map(\.id) == ["tracked"])
+        #expect(threads.first?.status.type == .active)
+    }
+
+    @Test
     func codexAppSyncDoesNotReemitAlreadyRunningThread() throws {
         let status = try codexStatus(type: "active")
 

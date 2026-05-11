@@ -210,23 +210,13 @@ final class CodexAppServerCoordinator {
             throw firstError
         }
 
-        var threadsByID: [String: CodexThread] = [:]
-
-        for thread in loadedThreads where !thread.ephemeral {
-            threadsByID[thread.id] = thread
-        }
-
-        for thread in allThreads where !thread.ephemeral && thread.status.type == .active {
-            threadsByID[thread.id] = thread
-        }
-
-        let syncableThreads = threadsByID.values.sorted { lhs, rhs in
-            if lhs.status.type == rhs.status.type {
-                return lhs.updatedAt > rhs.updatedAt
+        let syncableThreads = Self.syncableThreads(
+            loadedThreads: loadedThreads,
+            allThreads: allThreads,
+            isSessionTracked: { [isSessionTracked] id in
+                isSessionTracked?(id) == true
             }
-
-            return lhs.status.type == .active
-        }
+        )
 
         return CurrentThreadSnapshot(
             syncableThreads: syncableThreads,
@@ -238,6 +228,41 @@ final class CodexAppServerCoordinator {
                 }
             )
         )
+    }
+
+    nonisolated static func syncableThreads(
+        loadedThreads: [CodexThread],
+        allThreads: [CodexThread],
+        isSessionTracked: (String) -> Bool
+    ) -> [CodexThread] {
+        var threadsByID: [String: CodexThread] = [:]
+
+        for thread in loadedThreads where !thread.ephemeral {
+            threadsByID[thread.id] = thread
+        }
+
+        for thread in allThreads where !thread.ephemeral {
+            guard thread.status.type == .active || isSessionTracked(thread.id) else {
+                continue
+            }
+
+            if let existing = threadsByID[thread.id],
+               existing.status.type == .active,
+               thread.status.type != .active,
+               thread.updatedAt < existing.updatedAt {
+                continue
+            }
+
+            threadsByID[thread.id] = thread
+        }
+
+        return threadsByID.values.sorted { lhs, rhs in
+            if lhs.status.type == rhs.status.type {
+                return lhs.updatedAt > rhs.updatedAt
+            }
+
+            return lhs.status.type == .active
+        }
     }
 
     nonisolated static func hasRecentUnsyncedFallbackCandidate(
