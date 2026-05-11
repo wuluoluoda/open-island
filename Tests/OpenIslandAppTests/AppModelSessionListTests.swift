@@ -744,6 +744,51 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func rolloutCompletionNotificationPresentsWhenRediscoveryEmitsEvent() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var playedSoundCount = 0
+        let model = AppModel(
+            isNotificationSessionAlreadyFrontmost: { _ in true }
+        )
+        model.overlay.notificationSoundPlayer = { _ in
+            playedSoundCount += 1
+        }
+        model.notchStatus = .closed
+        model.notchOpenReason = nil
+        model.state = SessionState(
+            sessions: [
+                AgentSession(
+                    id: "rediscovered-completed-session",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    attachmentState: .attached,
+                    phase: .running,
+                    summary: "Working.",
+                    updatedAt: now
+                ),
+            ]
+        )
+
+        model.applyTrackedEvent(
+            .sessionCompleted(
+                SessionCompleted(
+                    sessionID: "rediscovered-completed-session",
+                    summary: "Turn completed.",
+                    timestamp: now.addingTimeInterval(1)
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .rollout
+        )
+
+        #expect(model.notchStatus == .opened)
+        #expect(model.notchOpenReason == .notification)
+        #expect(model.islandSurface == .sessionList(actionableSessionID: "rediscovered-completed-session"))
+        #expect(playedSoundCount == 1)
+    }
+
+    @Test
     func closeTransitionSetsStateImmediatelyAndClearsPending() {
         let model = AppModel()
         model.notchStatus = .opened

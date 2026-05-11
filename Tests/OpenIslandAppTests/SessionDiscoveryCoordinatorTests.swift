@@ -135,6 +135,78 @@ struct SessionDiscoveryCoordinatorTests {
     }
 
     @Test
+    func codexAppRediscoveryEmitsCompletionForTrackedRunningSession() {
+        var existing = codexSession(id: "tracked", transcriptPath: "/tmp/tracked.jsonl")
+        existing.isCodexAppSession = true
+        existing.phase = .running
+        existing.summary = "Codex is working..."
+        existing.updatedAt = Date(timeIntervalSince1970: 1_000)
+
+        var discovered = existing
+        discovered.phase = .completed
+        discovered.summary = "Done."
+        discovered.updatedAt = Date(timeIntervalSince1970: 1_050)
+
+        let events = SessionDiscoveryCoordinator.rediscoveredCompletionEvents(
+            existingSessions: [existing],
+            discoveredSessions: [discovered]
+        )
+
+        guard case let .sessionCompleted(payload) = events.first else {
+            Issue.record("Expected rediscovery to emit a completion event.")
+            return
+        }
+
+        #expect(events.count == 1)
+        #expect(payload.sessionID == "tracked")
+        #expect(payload.summary == "Done.")
+        #expect(payload.timestamp == Date(timeIntervalSince1970: 1_050))
+        #expect(payload.isSessionEnd == false)
+    }
+
+    @Test
+    func codexAppRediscoveryPreservesActiveStateUntilCompletionEventIsApplied() {
+        var existing = codexSession(id: "tracked", transcriptPath: "/tmp/tracked.jsonl")
+        existing.isCodexAppSession = true
+        existing.phase = .running
+        existing.summary = "Codex is working..."
+        existing.updatedAt = Date(timeIntervalSince1970: 1_000)
+
+        var discovered = existing
+        discovered.phase = .completed
+        discovered.summary = "Done."
+        discovered.updatedAt = Date(timeIntervalSince1970: 1_050)
+
+        let preserved = SessionDiscoveryCoordinator.preserveActiveStateForRediscoveredCompletions(
+            [discovered],
+            existingSessions: [existing]
+        )
+
+        #expect(preserved.first?.phase == .running)
+        #expect(preserved.first?.summary == "Codex is working...")
+        #expect(preserved.first?.updatedAt == Date(timeIntervalSince1970: 1_000))
+    }
+
+    @Test
+    func codexAppRediscoverySkipsStaleCompletion() {
+        var existing = codexSession(id: "tracked", transcriptPath: "/tmp/tracked.jsonl")
+        existing.isCodexAppSession = true
+        existing.phase = .running
+        existing.updatedAt = Date(timeIntervalSince1970: 1_100)
+
+        var discovered = existing
+        discovered.phase = .completed
+        discovered.updatedAt = Date(timeIntervalSince1970: 1_050)
+
+        let events = SessionDiscoveryCoordinator.rediscoveredCompletionEvents(
+            existingSessions: [existing],
+            discoveredSessions: [discovered]
+        )
+
+        #expect(events.isEmpty)
+    }
+
+    @Test
     func codexAppSyncDoesNotReemitAlreadyRunningThread() throws {
         let status = try codexStatus(type: "active")
 

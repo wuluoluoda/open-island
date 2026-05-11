@@ -762,6 +762,13 @@ final class AppModel {
             self?.synchronizeSelection()
             self?.refreshOverlayPlacementIfVisible()
         }
+        discovery.onRediscoveredEvent = { [weak self] event in
+            self?.applyTrackedEvent(
+                event,
+                updateLastActionMessage: false,
+                ingress: .rollout
+            )
+        }
 
         discovery.codexRolloutWatcher.eventHandler = { [weak self] event in
             Task { @MainActor [weak self] in
