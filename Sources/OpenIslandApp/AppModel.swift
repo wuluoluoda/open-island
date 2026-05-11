@@ -1960,10 +1960,9 @@ final class AppModel {
             return
         }
 
-        let coldStartSuppressed = ingress != .bridge && isResolvingInitialLiveSessions
-        guard !coldStartSuppressed else {
+        guard !shouldSuppressNotificationDuringInitialResolution(for: session, ingress: ingress) else {
             NotificationDebugLog.write(
-                "notification skipped reason=initialResolution sessionID=\(sessionID) phase=\(session.phase) ingress=\(ingress)"
+                "notification skipped reason=initialResolution sessionID=\(sessionID) phase=\(session.phase) attachment=\(session.attachmentState) codexApp=\(session.isCodexAppSession) processAlive=\(session.isProcessAlive) ingress=\(ingress)"
             )
             return
         }
@@ -2042,8 +2041,27 @@ final class AppModel {
         session: AgentSession,
         ingress: TrackedEventIngress
     ) -> Bool {
-        (ingress == .bridge || !isResolvingInitialLiveSessions)
+        !shouldSuppressNotificationDuringInitialResolution(for: session, ingress: ingress)
             && surface.matchesCurrentState(of: session)
+    }
+
+    private func shouldSuppressNotificationDuringInitialResolution(
+        for session: AgentSession,
+        ingress: TrackedEventIngress
+    ) -> Bool {
+        guard ingress != .bridge && isResolvingInitialLiveSessions else {
+            return false
+        }
+
+        if session.attachmentState == .attached {
+            return false
+        }
+
+        if session.isCodexAppSession && session.isProcessAlive {
+            return false
+        }
+
+        return true
     }
 
     private func notificationSurfaceCanOpenOverCurrentIslandState() -> Bool {
