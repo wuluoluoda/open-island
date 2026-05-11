@@ -344,6 +344,90 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func staleRolloutRunningEventDoesNotDowngradeCompletedSession() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let model = AppModel()
+        model.state = SessionState(
+            sessions: [
+                AgentSession(
+                    id: "codex-app-thread",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    attachmentState: .attached,
+                    phase: .completed,
+                    summary: "Turn completed.",
+                    updatedAt: now
+                ),
+            ]
+        )
+
+        model.applyTrackedEvent(
+            .activityUpdated(
+                SessionActivityUpdated(
+                    sessionID: "codex-app-thread",
+                    summary: "Stale rollout says still running.",
+                    phase: .running,
+                    timestamp: now.addingTimeInterval(-1)
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .rollout
+        )
+
+        #expect(model.state.session(id: "codex-app-thread")?.phase == .completed)
+        #expect(model.state.session(id: "codex-app-thread")?.summary == "Turn completed.")
+    }
+
+    @Test
+    func freshRolloutRunningEventStartsNewTurnFromCompletedSession() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let model = AppModel()
+        model.state = SessionState(
+            sessions: [
+                AgentSession(
+                    id: "codex-app-thread",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    attachmentState: .attached,
+                    phase: .completed,
+                    summary: "Turn completed.",
+                    updatedAt: now,
+                    codexMetadata: CodexSessionMetadata(lastUserPrompt: "First prompt")
+                ),
+            ]
+        )
+
+        model.applyTrackedEvent(
+            .sessionMetadataUpdated(
+                SessionMetadataUpdated(
+                    sessionID: "codex-app-thread",
+                    codexMetadata: CodexSessionMetadata(lastUserPrompt: "New prompt"),
+                    timestamp: now.addingTimeInterval(5)
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .rollout
+        )
+        model.applyTrackedEvent(
+            .activityUpdated(
+                SessionActivityUpdated(
+                    sessionID: "codex-app-thread",
+                    summary: "Codex started a new turn.",
+                    phase: .running,
+                    timestamp: now.addingTimeInterval(5)
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .rollout
+        )
+
+        #expect(model.state.session(id: "codex-app-thread")?.phase == .running)
+        #expect(model.state.session(id: "codex-app-thread")?.summary == "Codex started a new turn.")
+    }
+
+    @Test
     func bridgeNotificationIsSuppressedWhenSessionIsAlreadyFrontmost() async throws {
         let now = Date(timeIntervalSince1970: 2_000)
         var playedSoundCount = 0
@@ -453,6 +537,53 @@ struct AppModelSessionListTests {
         #expect(model.notchStatus == .opened)
         #expect(model.notchOpenReason == .notification)
         #expect(model.islandSurface == .sessionList(actionableSessionID: "background-session"))
+        #expect(playedSoundCount == 1)
+    }
+
+    @Test
+    func completionNotificationPresentsEvenWhenSessionIsFrontmost() async throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var playedSoundCount = 0
+        let model = AppModel(
+            isNotificationSessionAlreadyFrontmost: { session in
+                session.id == "frontmost-completed-session"
+            }
+        )
+        model.overlay.notificationSoundPlayer = { _ in
+            playedSoundCount += 1
+        }
+        model.notchStatus = .closed
+        model.notchOpenReason = nil
+        model.state = SessionState(
+            sessions: [
+                AgentSession(
+                    id: "frontmost-completed-session",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    attachmentState: .attached,
+                    phase: .running,
+                    summary: "Working.",
+                    updatedAt: now
+                ),
+            ]
+        )
+
+        model.applyTrackedEvent(
+            .sessionCompleted(
+                SessionCompleted(
+                    sessionID: "frontmost-completed-session",
+                    summary: "Turn completed.",
+                    timestamp: now.addingTimeInterval(1)
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .bridge
+        )
+
+        #expect(model.notchStatus == .opened)
+        #expect(model.notchOpenReason == .notification)
+        #expect(model.islandSurface == .sessionList(actionableSessionID: "frontmost-completed-session"))
         #expect(playedSoundCount == 1)
     }
 

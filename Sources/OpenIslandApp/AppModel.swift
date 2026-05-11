@@ -1716,11 +1716,16 @@ final class AppModel {
         // Guard: don't let rollout events downgrade a session from completed
         // back to running. The bridge's sessionCompleted is authoritative; the
         // rollout watcher may have read the JSONL before task_complete was
-        // flushed, producing a stale activityUpdated(phase: .running).
+        // flushed, producing a stale activityUpdated(phase: .running).  Allow
+        // the transition when the rollout event is at least as new as the
+        // current session state, which covers a fresh Codex.app turn whose
+        // prompt/metadata was just loaded from the transcript.
         if ingress == .rollout,
            case let .activityUpdated(payload) = event,
            payload.phase == .running,
-           state.session(id: payload.sessionID)?.phase == .completed {
+           let session = state.session(id: payload.sessionID),
+           session.phase == .completed,
+           payload.timestamp < session.updatedAt {
             return
         }
 
@@ -1922,7 +1927,8 @@ final class AppModel {
 
         playNotificationSound()
 
-        guard suppressFrontmostNotifications else {
+        guard suppressFrontmostNotifications,
+              session.phase != .completed else {
             presentNotificationSurface(surface, playSound: false)
             return
         }
