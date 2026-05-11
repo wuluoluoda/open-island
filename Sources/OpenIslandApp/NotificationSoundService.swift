@@ -6,6 +6,7 @@ struct NotificationSoundService {
     private static let soundsDirectory = "/System/Library/Sounds"
     private static let defaultsKey = "notification.sound.name"
     static let defaultSoundName = "Bottle"
+    private static var activeSound: NSSound?
 
     /// Returns the list of available system sound names (without file extension).
     static func availableSounds() -> [String] {
@@ -34,13 +35,16 @@ struct NotificationSoundService {
         guard let sound = NSSound(named: NSSound.Name(name)) else {
             return
         }
+        activeSound = sound
         sound.stop()
         sound.play()
     }
 
     /// Plays the user-selected notification sound, respecting the mute setting.
     static func playNotification(isMuted: Bool) {
-        guard !isMuted else { return }
+        guard !isMuted else {
+            return
+        }
         play(selectedSoundName)
     }
 }

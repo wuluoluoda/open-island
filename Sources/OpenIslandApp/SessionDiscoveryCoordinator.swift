@@ -37,6 +37,9 @@ final class SessionDiscoveryCoordinator {
     var onStateChanged: (() -> Void)?
 
     @ObservationIgnored
+    var onRediscoveredEvent: ((AgentEvent) -> Void)?
+
+    @ObservationIgnored
     private let codexSessionStore = CodexSessionStore()
 
     @ObservationIgnored
@@ -461,18 +464,92 @@ final class SessionDiscoveryCoordinator {
             }
             return session
         }
+        let rediscoveredEvents = Self.rediscoveredCompletionEvents(
+            existingSessions: state.sessions,
+            discoveredSessions: discoveredSessions
+        )
+        let discoveredSessionsForMerge = Self.preserveActiveStateForRediscoveredCompletions(
+            discoveredSessions,
+            existingSessions: state.sessions
+        )
 
-        let merged = mergeDiscoveredSessions(discoveredSessions)
+        let merged = mergeDiscoveredSessions(discoveredSessionsForMerge)
         let nextState = SessionState(sessions: merged)
-        guard nextState != state else {
-            return
+        let didChangeState = nextState != state
+
+        if didChangeState {
+            state = nextState
+            refreshCodexRolloutTracking()
+            scheduleCodexSessionPersistence()
+            if !newRecords.isEmpty {
+                onStatusMessage?("Discovered \(newRecords.count) new Codex.app session(s) via rollout re-scan.")
+            }
         }
 
-        state = nextState
-        refreshCodexRolloutTracking()
-        scheduleCodexSessionPersistence()
-        if !newRecords.isEmpty {
-            onStatusMessage?("Discovered \(newRecords.count) new Codex.app session(s) via rollout re-scan.")
+        for event in rediscoveredEvents {
+            onRediscoveredEvent?(event)
+        }
+    }
+
+    nonisolated static func rediscoveredCompletionEvents(
+        existingSessions: [AgentSession],
+        discoveredSessions: [AgentSession]
+    ) -> [AgentEvent] {
+        let existingByID = Dictionary(uniqueKeysWithValues: existingSessions.map { ($0.id, $0) })
+
+        return discoveredSessions.compactMap { discovered in
+            guard discovered.tool == .codex,
+                  discovered.isCodexAppSession,
+                  discovered.phase == .completed,
+                  let existing = existingByID[discovered.id],
+                  existing.phase != .completed,
+                  discovered.updatedAt >= existing.updatedAt else {
+                return nil
+            }
+
+            return .sessionCompleted(
+                SessionCompleted(
+                    sessionID: discovered.id,
+                    summary: discovered.summary,
+                    timestamp: discovered.updatedAt,
+                    isInterrupt: discovered.lastTurnInterrupted,
+                    isSessionEnd: false
+                )
+            )
+        }
+    }
+
+    nonisolated static func preserveActiveStateForRediscoveredCompletions(
+        _ discoveredSessions: [AgentSession],
+        existingSessions: [AgentSession]
+    ) -> [AgentSession] {
+        let completionSessionIDs = Set(rediscoveredCompletionEvents(
+            existingSessions: existingSessions,
+            discoveredSessions: discoveredSessions
+        ).compactMap { event -> String? in
+            guard case let .sessionCompleted(payload) = event else { return nil }
+            return payload.sessionID
+        })
+        guard !completionSessionIDs.isEmpty else {
+            return discoveredSessions
+        }
+
+        let existingByID = Dictionary(uniqueKeysWithValues: existingSessions.map { ($0.id, $0) })
+        return discoveredSessions.map { discovered in
+            guard completionSessionIDs.contains(discovered.id),
+                  let existing = existingByID[discovered.id] else {
+                return discovered
+            }
+
+            var preserved = discovered
+            preserved.phase = existing.phase
+            preserved.summary = existing.summary
+            preserved.permissionRequest = existing.permissionRequest
+            preserved.questionPrompt = existing.questionPrompt
+            preserved.lastTurnInterrupted = existing.lastTurnInterrupted
+            preserved.isSessionEnded = existing.isSessionEnded
+            preserved.updatedAt = existing.updatedAt
+            return preserved
         }
     }
 

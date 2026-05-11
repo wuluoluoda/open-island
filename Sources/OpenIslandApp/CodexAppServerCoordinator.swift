@@ -49,6 +49,11 @@ final class CodexAppServerCoordinator {
     @ObservationIgnored
     var isSessionTracked: ((String) -> Bool)?
 
+    /// Returns the current tracked phase for a session. Used by periodic
+    /// app-server sync to avoid emitting duplicate running updates.
+    @ObservationIgnored
+    var trackedSessionPhase: ((String) -> SessionPhase?)?
+
     private(set) var isConnected = false
     private(set) var connectionState: RuntimeConnectionState = .disconnected {
         didSet {
@@ -150,7 +155,16 @@ final class CodexAppServerCoordinator {
                 // Skip threads already tracked — re-emitting sessionStarted
                 // rebuilds the AgentSession and would wipe richer state
                 // already accumulated from hooks or rediscovery.
-                if isSessionTracked?(thread.id) == true { continue }
+                if isSessionTracked?(thread.id) == true {
+                    guard Self.shouldEmitSyncedStatusUpdate(
+                        thread.status,
+                        currentPhase: trackedSessionPhase?(thread.id)
+                    ) else {
+                        continue
+                    }
+                    emitStatusUpdate(thread.status, for: thread.id)
+                    continue
+                }
                 emitSessionStarted(from: thread)
                 created += 1
             }
@@ -196,23 +210,13 @@ final class CodexAppServerCoordinator {
             throw firstError
         }
 
-        var threadsByID: [String: CodexThread] = [:]
-
-        for thread in loadedThreads where !thread.ephemeral {
-            threadsByID[thread.id] = thread
-        }
-
-        for thread in allThreads where !thread.ephemeral && thread.status.type == .active {
-            threadsByID[thread.id] = thread
-        }
-
-        let syncableThreads = threadsByID.values.sorted { lhs, rhs in
-            if lhs.status.type == rhs.status.type {
-                return lhs.updatedAt > rhs.updatedAt
+        let syncableThreads = Self.syncableThreads(
+            loadedThreads: loadedThreads,
+            allThreads: allThreads,
+            isSessionTracked: { [isSessionTracked] id in
+                isSessionTracked?(id) == true
             }
-
-            return lhs.status.type == .active
-        }
+        )
 
         return CurrentThreadSnapshot(
             syncableThreads: syncableThreads,
@@ -224,6 +228,41 @@ final class CodexAppServerCoordinator {
                 }
             )
         )
+    }
+
+    nonisolated static func syncableThreads(
+        loadedThreads: [CodexThread],
+        allThreads: [CodexThread],
+        isSessionTracked: (String) -> Bool
+    ) -> [CodexThread] {
+        var threadsByID: [String: CodexThread] = [:]
+
+        for thread in loadedThreads where !thread.ephemeral {
+            threadsByID[thread.id] = thread
+        }
+
+        for thread in allThreads where !thread.ephemeral {
+            guard thread.status.type == .active || isSessionTracked(thread.id) else {
+                continue
+            }
+
+            if let existing = threadsByID[thread.id],
+               existing.status.type == .active,
+               thread.status.type != .active,
+               thread.updatedAt < existing.updatedAt {
+                continue
+            }
+
+            threadsByID[thread.id] = thread
+        }
+
+        return threadsByID.values.sorted { lhs, rhs in
+            if lhs.status.type == rhs.status.type {
+                return lhs.updatedAt > rhs.updatedAt
+            }
+
+            return lhs.status.type == .active
+        }
     }
 
     nonisolated static func hasRecentUnsyncedFallbackCandidate(
@@ -254,55 +293,7 @@ final class CodexAppServerCoordinator {
             emitSessionStarted(from: thread)
 
         case .threadStatusChanged(let threadId, let status):
-            switch status.type {
-            case .active:
-                if status.isWaitingOnApproval {
-                    onEvent?(.permissionRequested(
-                        PermissionRequested(
-                            sessionID: threadId,
-                            request: PermissionRequest(
-                                title: "Approval Required",
-                                summary: "Codex is waiting for approval.",
-                                affectedPath: ""
-                            ),
-                            timestamp: .now
-                        )
-                    ))
-                } else if status.isWaitingOnUserInput {
-                    onEvent?(.questionAsked(
-                        QuestionAsked(
-                            sessionID: threadId,
-                            prompt: QuestionPrompt(
-                                title: "Codex is waiting for input.",
-                                options: []
-                            ),
-                            timestamp: .now
-                        )
-                    ))
-                } else {
-                    onEvent?(.activityUpdated(
-                        SessionActivityUpdated(
-                            sessionID: threadId,
-                            summary: "Codex is working…",
-                            phase: .running,
-                            timestamp: .now
-                        )
-                    ))
-                }
-            case .idle:
-                // Idle means "between turns" in the same thread — the thread
-                // is still open.  Only `thread/closed` truly ends a session.
-                onEvent?(.activityUpdated(
-                    SessionActivityUpdated(
-                        sessionID: threadId,
-                        summary: "Idle.",
-                        phase: .completed,
-                        timestamp: .now
-                    )
-                ))
-            case .notLoaded, .systemError:
-                break
-            }
+            emitStatusUpdate(status, for: threadId)
 
         case .threadClosed(let threadId):
             onEvent?(.sessionCompleted(
@@ -333,9 +324,10 @@ final class CodexAppServerCoordinator {
 
         case .turnCompleted(let threadId, let turn):
             // A turn completing doesn't end the thread — the user can send
-            // another message.  Use activityUpdated(phase: .completed) so the
-            // session stays visible as "Completed" rather than being torn
-            // down.  `thread/closed` is the authoritative end signal.
+            // another message.  Use sessionCompleted without isSessionEnd so
+            // the regular completion notification/card path fires while the
+            // thread remains tracked.  `thread/closed` is the authoritative
+            // end signal.
             let summary: String
             switch turn.status {
             case .completed: summary = "Turn completed."
@@ -343,12 +335,13 @@ final class CodexAppServerCoordinator {
             case .failed: summary = "Turn failed."
             case .inProgress: summary = "Turn in progress."
             }
-            onEvent?(.activityUpdated(
-                SessionActivityUpdated(
+            onEvent?(.sessionCompleted(
+                SessionCompleted(
                     sessionID: threadId,
                     summary: summary,
-                    phase: .completed,
-                    timestamp: .now
+                    timestamp: .now,
+                    isInterrupt: turn.status == .interrupted,
+                    isSessionEnd: false
                 )
             ))
 
@@ -358,6 +351,93 @@ final class CodexAppServerCoordinator {
     }
 
     // MARK: - Helpers
+
+    nonisolated static func shouldEmitSyncedStatusUpdate(
+        _ status: CodexThreadStatus,
+        currentPhase: SessionPhase?
+    ) -> Bool {
+        switch status.type {
+        case .active:
+            break
+        case .idle:
+            return currentPhase != nil && currentPhase != .completed
+        case .notLoaded, .systemError:
+            return false
+        }
+
+        if status.isWaitingOnApproval {
+            return currentPhase != .waitingForApproval
+        }
+
+        if status.isWaitingOnUserInput {
+            return currentPhase != .waitingForAnswer
+        }
+
+        return currentPhase != .running
+    }
+
+    private func emitStatusUpdate(_ status: CodexThreadStatus, for threadId: String) {
+        guard let event = Self.syncedStatusEvent(status, for: threadId, timestamp: .now) else {
+            return
+        }
+        onEvent?(event)
+    }
+
+    nonisolated static func syncedStatusEvent(
+        _ status: CodexThreadStatus,
+        for threadId: String,
+        timestamp: Date
+    ) -> AgentEvent? {
+        switch status.type {
+        case .active:
+            if status.isWaitingOnApproval {
+                return .permissionRequested(
+                    PermissionRequested(
+                        sessionID: threadId,
+                        request: PermissionRequest(
+                            title: "Approval Required",
+                            summary: "Codex is waiting for approval.",
+                            affectedPath: ""
+                        ),
+                        timestamp: timestamp
+                    )
+                )
+            } else if status.isWaitingOnUserInput {
+                return .questionAsked(
+                    QuestionAsked(
+                        sessionID: threadId,
+                        prompt: QuestionPrompt(
+                            title: "Codex is waiting for input.",
+                            options: []
+                        ),
+                        timestamp: timestamp
+                    )
+                )
+            } else {
+                return .activityUpdated(
+                    SessionActivityUpdated(
+                        sessionID: threadId,
+                        summary: "Codex is working…",
+                        phase: .running,
+                        timestamp: timestamp
+                    )
+                )
+            }
+        case .idle:
+            // Idle means "between turns" in the same thread — the thread is
+            // still open. Only `thread/closed` truly ends a session.
+            return .sessionCompleted(
+                SessionCompleted(
+                    sessionID: threadId,
+                    summary: "Turn completed.",
+                    timestamp: timestamp,
+                    isSessionEnd: false
+                )
+            )
+        case .notLoaded, .systemError:
+            return nil
+        }
+    }
 
     private func emitSessionStarted(from thread: CodexThread) {
         let workspaceName = CodexSessionDisplayResolver.workspaceName(for: thread.cwd)

@@ -179,4 +179,51 @@ struct AgentSessionPresentationTests {
         #expect(session.spotlightPromptLineText == "You: Also confirm the worktree status.")
         #expect(session.notificationHeaderPromptLineText == nil)
     }
+
+    @Test
+    func runningActivityHidesComplexShellPreview() {
+        let session = AgentSession(
+            id: "session-1",
+            title: "Codex · worktree",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Working",
+            updatedAt: Date(timeIntervalSince1970: 10_000),
+            jumpTarget: JumpTarget(
+                terminalApp: "Codex.app",
+                workspaceName: "worktree",
+                paneTitle: "Codex · worktree",
+                workingDirectory: "/tmp/worktree",
+                codexThreadID: "thread-1"
+            ),
+            codexMetadata: CodexSessionMetadata(
+                currentTool: "exec_command",
+                currentCommandPreview: "node - <<'NODE' const fs=require('fs'); console.log(fs.readFileSync('manifest.json')) NODE"
+            )
+        )
+
+        #expect(session.spotlightActivityLineText == "Bash")
+    }
+
+    @Test
+    func runningActivityKeepsShortShellPreview() {
+        let session = AgentSession(
+            id: "session-1",
+            title: "Codex · worktree",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Working",
+            updatedAt: Date(timeIntervalSince1970: 10_000),
+            codexMetadata: CodexSessionMetadata(
+                currentTool: "exec_command",
+                currentCommandPreview: "git status -sb"
+            )
+        )
+
+        #expect(session.spotlightActivityLineText == "Bash git status -sb")
+    }
 }

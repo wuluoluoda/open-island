@@ -762,6 +762,13 @@ final class AppModel {
             self?.synchronizeSelection()
             self?.refreshOverlayPlacementIfVisible()
         }
+        discovery.onRediscoveredEvent = { [weak self] event in
+            self?.applyTrackedEvent(
+                event,
+                updateLastActionMessage: false,
+                ingress: .rollout
+            )
+        }
 
         discovery.codexRolloutWatcher.eventHandler = { [weak self] event in
             Task { @MainActor [weak self] in
@@ -791,6 +798,9 @@ final class AppModel {
         }
         codexAppServer.isSessionTracked = { [weak self] id in
             self?.state.session(id: id) != nil
+        }
+        codexAppServer.trackedSessionPhase = { [weak self] id in
+            self?.state.session(id: id)?.phase
         }
 
         monitoring.syntheticClaudeSessionPrefix = Self.syntheticClaudeSessionPrefix
@@ -950,11 +960,16 @@ final class AppModel {
             return []
         }
 
+        let statusesBySessionID = Dictionary(
+            uniqueKeysWithValues: codexSessions.map { session in
+                (session.id, codexOperationalStatus(for: session, at: date))
+            }
+        )
         let grouped = Dictionary(grouping: codexSessions, by: radarProjectName(for:))
         let projects = grouped.compactMap { projectName, sessions -> CodexRadarProject? in
             let topSession = sessions.max { lhs, rhs in
-                let lhsStatus = codexOperationalStatus(for: lhs, at: date)
-                let rhsStatus = codexOperationalStatus(for: rhs, at: date)
+                let lhsStatus = statusesBySessionID[lhs.id] ?? codexOperationalStatus(for: lhs, at: date)
+                let rhsStatus = statusesBySessionID[rhs.id] ?? codexOperationalStatus(for: rhs, at: date)
                 if lhsStatus.stableSortPriority == rhsStatus.stableSortPriority {
                     return lhs.updatedAt < rhs.updatedAt
                 }
@@ -965,9 +980,9 @@ final class AppModel {
                 return nil
             }
 
-            let status = codexOperationalStatus(for: topSession, at: date)
+            let status = statusesBySessionID[topSession.id] ?? codexOperationalStatus(for: topSession, at: date)
             let radarSortPriority = sessions
-                .map { codexOperationalStatus(for: $0, at: date).radarSortPriority }
+                .map { statusesBySessionID[$0.id]?.radarSortPriority ?? status.radarSortPriority }
                 .max() ?? status.radarSortPriority
             let sortedSessions = sessions.sorted { $0.updatedAt > $1.updatedAt }
             let latestSession = sortedSessions.first ?? topSession
@@ -982,7 +997,9 @@ final class AppModel {
                 topStatus: status,
                 sortPriority: radarSortPriority,
                 runningTaskCount: sessions.filter { $0.phase == .running }.count,
-                actionableTaskCount: sessions.filter { codexOperationalStatus(for: $0, at: date).requiresUserAction }.count,
+                actionableTaskCount: sessions.filter {
+                    statusesBySessionID[$0.id]?.requiresUserAction == true
+                }.count,
                 latestSummary: latestSummary,
                 updatedAt: latestSession.updatedAt,
                 primarySessionID: topSession.id,
@@ -1349,8 +1366,11 @@ final class AppModel {
         prewarmJumpTargetsForVisibleSessions()
     }
     func handlePointerExitedIslandSurface() { overlay.handlePointerExitedIslandSurface() }
-    private func presentNotificationSurface(_ surface: IslandSurface) {
-        overlay.presentNotificationSurface(surface)
+    private func playNotificationSound() {
+        overlay.playNotificationSound()
+    }
+    private func presentNotificationSurface(_ surface: IslandSurface, playSound: Bool = true) {
+        overlay.presentNotificationSurface(surface, playSound: playSound)
         prewarmJumpTargets(for: surface.sessionID)
     }
     private func reconcileIslandSurfaceAfterStateChange() { overlay.reconcileIslandSurfaceAfterStateChange() }
@@ -1713,11 +1733,16 @@ final class AppModel {
         // Guard: don't let rollout events downgrade a session from completed
         // back to running. The bridge's sessionCompleted is authoritative; the
         // rollout watcher may have read the JSONL before task_complete was
-        // flushed, producing a stale activityUpdated(phase: .running).
+        // flushed, producing a stale activityUpdated(phase: .running).  Allow
+        // the transition when the rollout event is at least as new as the
+        // current session state, which covers a fresh Codex.app turn whose
+        // prompt/metadata was just loaded from the transcript.
         if ingress == .rollout,
            case let .activityUpdated(payload) = event,
            payload.phase == .running,
-           state.session(id: payload.sessionID)?.phase == .completed {
+           let session = state.session(id: payload.sessionID),
+           session.phase == .completed,
+           payload.timestamp < session.updatedAt {
             return
         }
 
@@ -1910,15 +1935,40 @@ final class AppModel {
         wasAlreadyCompleted: Bool,
         ingress: TrackedEventIngress
     ) {
-        guard !wasAlreadyCompleted,
-              notificationSurfaceIsEligibleForPresentation(surface, ingress: ingress),
-              let sessionID = surface.sessionID,
-              let session = state.session(id: sessionID) else {
+        guard !wasAlreadyCompleted else {
             return
         }
 
-        guard suppressFrontmostNotifications else {
-            presentNotificationSurface(surface)
+        guard let sessionID = surface.sessionID else {
+            return
+        }
+
+        guard let session = state.session(id: sessionID) else {
+            return
+        }
+
+        guard !shouldSuppressNotificationDuringInitialResolution(for: session, ingress: ingress) else {
+            return
+        }
+
+        guard surface.matchesCurrentState(of: session) else {
+            return
+        }
+
+        playNotificationSound()
+
+        if session.phase == .completed {
+            presentNotificationSurface(surface, playSound: false)
+            return
+        }
+
+        guard notificationSurfaceCanOpenOverCurrentIslandState() else {
+            return
+        }
+
+        guard suppressFrontmostNotifications,
+              session.phase != .completed else {
+            presentNotificationSurface(surface, playSound: false)
             return
         }
 
@@ -1929,14 +1979,50 @@ final class AppModel {
             }
 
             let shouldSuppress = await self.isNotificationSessionAlreadyFrontmost(session)
-            guard !Task.isCancelled,
-                  !shouldSuppress,
-                  self.notificationSurfaceIsEligibleForPresentation(surface, ingress: ingress) else {
+            guard !Task.isCancelled else {
+                return
+            }
+            guard !shouldSuppress else {
+                return
+            }
+            guard self.notificationSurfaceIsEligibleForPresentation(surface, ingress: ingress) else {
                 return
             }
 
-            self.presentNotificationSurface(surface)
+            self.presentNotificationSurface(surface, playSound: false)
         }
+    }
+
+    private func notificationSurfaceMatchesCurrentState(
+        _ surface: IslandSurface,
+        session: AgentSession,
+        ingress: TrackedEventIngress
+    ) -> Bool {
+        !shouldSuppressNotificationDuringInitialResolution(for: session, ingress: ingress)
+            && surface.matchesCurrentState(of: session)
+    }
+
+    private func shouldSuppressNotificationDuringInitialResolution(
+        for session: AgentSession,
+        ingress: TrackedEventIngress
+    ) -> Bool {
+        guard ingress != .bridge && isResolvingInitialLiveSessions else {
+            return false
+        }
+
+        if session.attachmentState == .attached {
+            return false
+        }
+
+        if session.isCodexAppSession && session.isProcessAlive {
+            return false
+        }
+
+        return true
+    }
+
+    private func notificationSurfaceCanOpenOverCurrentIslandState() -> Bool {
+        notchStatus == .closed || notchOpenReason == .notification
     }
 
     private func notificationSurfaceIsEligibleForPresentation(
@@ -1948,9 +2034,8 @@ final class AppModel {
             return false
         }
 
-        return (ingress == .bridge || !isResolvingInitialLiveSessions)
-            && (notchStatus == .closed || notchOpenReason == .notification)
-            && surface.matchesCurrentState(of: session)
+        return notificationSurfaceMatchesCurrentState(surface, session: session, ingress: ingress)
+            && notificationSurfaceCanOpenOverCurrentIslandState()
     }
 
     private func radarProjectName(for session: AgentSession) -> String {
@@ -2401,9 +2486,14 @@ final class AppModel {
 
     private func computeSessionBuckets() -> (primary: [AgentSession], overflow: [AgentSession]) {
         let now = Date.now
+        let scoresBySessionID = Dictionary(
+            uniqueKeysWithValues: state.sessions.map { session in
+                (session.id, displayPriority(for: session, now: now))
+            }
+        )
         let rankedSessions = state.sessions.sorted { lhs, rhs in
-            let lhsScore = displayPriority(for: lhs, now: now)
-            let rhsScore = displayPriority(for: rhs, now: now)
+            let lhsScore = scoresBySessionID[lhs.id] ?? 0
+            let rhsScore = scoresBySessionID[rhs.id] ?? 0
 
             if lhsScore == rhsScore {
                 if lhs.islandActivityDate == rhs.islandActivityDate {
