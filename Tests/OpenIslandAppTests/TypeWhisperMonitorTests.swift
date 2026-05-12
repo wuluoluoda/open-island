@@ -94,6 +94,31 @@ struct TypeWhisperMonitorTests {
     }
 
     @Test
+    func cachedFootprintOnlyReusesForSamePreferenceState() {
+        let unloadedMemory = typeWhisperSnapshot(
+            loadedModel: nil,
+            memoryMegabytes: 26
+        )
+        let loadedPreference = typeWhisperSnapshot(
+            loadedModel: "qwen3-asr-1.7b-6bit",
+            memoryMegabytes: nil
+        )
+        let unchangedPreference = typeWhisperSnapshot(
+            loadedModel: nil,
+            memoryMegabytes: nil
+        )
+
+        #expect(!TypeWhisperMonitor.canReuseMemoryFootprint(
+            previous: unloadedMemory,
+            next: loadedPreference
+        ))
+        #expect(TypeWhisperMonitor.canReuseMemoryFootprint(
+            previous: unloadedMemory,
+            next: unchangedPreference
+        ))
+    }
+
+    @Test
     @MainActor
     func stopMonitoringCanClearSnapshotForDisabledFeature() {
         let monitor = TypeWhisperMonitor()

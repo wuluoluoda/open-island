@@ -140,7 +140,14 @@ final class TypeWhisperMonitor {
             await self.refresh()
 
             while !Task.isCancelled {
-                try? await Task.sleep(for: Self.preferencePollingCadence(for: self.energyProfile))
+                do {
+                    try await Task.sleep(for: Self.preferencePollingCadence(for: self.energyProfile))
+                } catch {
+                    break
+                }
+                guard !Task.isCancelled else {
+                    break
+                }
                 await self.refresh()
             }
         }
@@ -163,12 +170,20 @@ final class TypeWhisperMonitor {
     }
 
     func refresh(forceFootprint: Bool = false, now: Date = Date()) async {
+        guard !Task.isCancelled else {
+            return
+        }
+
         let previous = snapshot
         var next = await Task.detached(priority: .utility) {
             Self.collectBaseSnapshot(now: now)
         }.value
 
-        if next.isRunning, next.processID == previous.processID {
+        guard !Task.isCancelled else {
+            return
+        }
+
+        if Self.canReuseMemoryFootprint(previous: previous, next: next) {
             next.memoryFootprintMegabytes = previous.memoryFootprintMegabytes
             next.memoryCheckedAt = previous.memoryCheckedAt
             next.memoryError = previous.memoryError
@@ -189,6 +204,10 @@ final class TypeWhisperMonitor {
             }.value
             isRefreshingFootprint = false
 
+            guard !Task.isCancelled else {
+                return
+            }
+
             switch footprint {
             case let .success(megabytes):
                 next.memoryFootprintMegabytes = megabytes
@@ -206,6 +225,17 @@ final class TypeWhisperMonitor {
         }
 
         snapshot = Self.reconcileLoadedTiming(previous: previous, next: next, now: now)
+    }
+
+    nonisolated static func canReuseMemoryFootprint(
+        previous: TypeWhisperSnapshot,
+        next: TypeWhisperSnapshot
+    ) -> Bool {
+        next.isRunning
+            && next.processID == previous.processID
+            && next.selectedEngine == previous.selectedEngine
+            && next.selectedModel == previous.selectedModel
+            && next.loadedModelFromPreferences == previous.loadedModelFromPreferences
     }
 
     nonisolated static func preferencePollingCadence(for profile: EnergyProfile) -> Duration {

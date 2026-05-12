@@ -111,6 +111,7 @@ struct IslandPanelView: View {
     private static let headerControlSpacing: CGFloat = 8
     private static let headerHorizontalPadding: CGFloat = 18
     private static let headerTopPadding: CGFloat = 2
+    private static let typeWhisperHeaderToggleWidth: CGFloat = 54
     private static let notchLaneSafetyInset: CGFloat = 12
     private static let closedIdleEdgeHeight: CGFloat = 4
     private static let codexShelfTriggerHeight: CGFloat = 42
@@ -278,7 +279,9 @@ struct IslandPanelView: View {
     }
 
     private var openedHeaderButtonsWidth: CGFloat {
-        (Self.headerControlButtonSize * 3) + (Self.headerControlSpacing * 2)
+        (Self.headerControlButtonSize * 3)
+            + Self.typeWhisperHeaderToggleWidth
+            + (Self.headerControlSpacing * 3)
     }
 
     var body: some View {
@@ -530,6 +533,8 @@ struct IslandPanelView: View {
                 model.toggleSoundMuted()
             }
 
+            typeWhisperHeaderToggle
+
             headerIconButton(systemName: "gearshape.fill", tint: .white.opacity(0.62)) {
                 model.showSettings()
             }
@@ -542,6 +547,28 @@ struct IslandPanelView: View {
                 showingQuitConfirmation = true
             }
         }
+    }
+
+    private var typeWhisperHeaderToggle: some View {
+        HStack(spacing: 4) {
+            typeWhisperIconView
+                .frame(width: 14, height: 14)
+
+            Toggle("", isOn: Binding(
+                get: { model.typeWhisperStatusEnabled },
+                set: { model.typeWhisperStatusEnabled = $0 }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .scaleEffect(0.72)
+            .frame(width: 30, height: 18)
+        }
+        .frame(width: Self.typeWhisperHeaderToggleWidth, height: Self.headerControlButtonSize)
+        .background(.white.opacity(0.08), in: Capsule())
+        .contentShape(Capsule())
+        .help("Show TypeWhisper status")
+        .accessibilityLabel("Show TypeWhisper status")
     }
 
     private func headerIconButton(
@@ -704,15 +731,6 @@ struct IslandPanelView: View {
                 .buttonStyle(.borderless)
                 .disabled(model.isRefreshingTypeWhisperFootprint || snapshot.processID == nil)
                 .help("Refresh TypeWhisper memory")
-
-                Toggle("", isOn: Binding(
-                    get: { model.typeWhisperStatusEnabled },
-                    set: { model.typeWhisperStatusEnabled = $0 }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .help("Show TypeWhisper status")
             }
 
             ViewThatFits(in: .horizontal) {
