@@ -197,13 +197,25 @@ struct IslandPanelView: View {
     }
 
     private var closedActivityPreview: String? {
-        if closedSpotlightSession != nil {
-            return nil
+        if let session = closedSpotlightSession {
+            guard !shouldHideActivityPreview(for: session.currentToolName) else {
+                return nil
+            }
+            return session.currentCommandPreviewText
         }
         guard typeWhisperClosedPresence else {
             return nil
         }
         return typeWhisperStatusTitle(model.typeWhisperSnapshot)
+    }
+
+    private func shouldHideActivityPreview(for toolName: String?) -> Bool {
+        switch toolName?.lowercased() {
+        case "write_stdin", "input", "type_text":
+            return true
+        default:
+            return false
+        }
     }
 
     /// Scout icon tint: blue if any running, green if any live, else gray.
@@ -2008,7 +2020,22 @@ private struct IslandSessionRow: View {
     }
 
     private var commandPreviewText: String {
+        let preview = shouldHideActivityPreview(for: session.currentToolName)
+            ? nil
+            : session.currentCommandPreviewText?.trimmedForNotificationCard
+        if let preview, !preview.isEmpty {
+            return "$ \(preview)"
+        }
         return session.permissionRequest?.summary.trimmedForNotificationCard ?? session.summary.trimmedForNotificationCard
+    }
+
+    private func shouldHideActivityPreview(for toolName: String?) -> Bool {
+        switch toolName?.lowercased() {
+        case "write_stdin", "input", "type_text":
+            return true
+        default:
+            return false
+        }
     }
 
     private func subagentElapsed(since start: Date, at now: Date) -> String {

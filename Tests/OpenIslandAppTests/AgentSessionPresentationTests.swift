@@ -208,7 +208,7 @@ struct AgentSessionPresentationTests {
     }
 
     @Test
-    func runningActivityHidesShortShellPreview() {
+    func runningActivityKeepsShortShellPreview() {
         let session = AgentSession(
             id: "session-1",
             title: "Codex · worktree",
@@ -224,7 +224,7 @@ struct AgentSessionPresentationTests {
             )
         )
 
-        #expect(session.spotlightActivityLineText == "Bash")
+        #expect(session.spotlightActivityLineText == "Bash git status -sb")
     }
 
     @Test
