@@ -226,4 +226,24 @@ struct AgentSessionPresentationTests {
 
         #expect(session.spotlightActivityLineText == "Bash git status -sb")
     }
+
+    @Test
+    func runningActivityHidesInputPreview() {
+        let session = AgentSession(
+            id: "session-1",
+            title: "Codex · worktree",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Working",
+            updatedAt: Date(timeIntervalSince1970: 10_000),
+            codexMetadata: CodexSessionMetadata(
+                currentTool: "write_stdin",
+                currentCommandPreview: "private dictated prompt"
+            )
+        )
+
+        #expect(session.spotlightActivityLineText == "Input")
+    }
 }

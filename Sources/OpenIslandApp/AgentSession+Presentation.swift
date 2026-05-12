@@ -279,7 +279,8 @@ extension AgentSession {
         }
 
         let label = currentToolDisplayName(for: currentTool)
-        guard let preview = currentCommandPreviewText?.trimmedForSurface,
+        guard !shouldHideCommandPreview(for: currentTool),
+              let preview = currentCommandPreviewText?.trimmedForSurface,
               shouldShowCommandPreview(preview) else {
             return label
         }
@@ -307,6 +308,15 @@ extension AgentSession {
 
         let normalized = preview.lowercased()
         return !complexShellMarkers.contains { normalized.contains($0) }
+    }
+
+    private func shouldHideCommandPreview(for toolName: String) -> Bool {
+        switch toolName.lowercased() {
+        case "write_stdin", "input", "type_text":
+            return true
+        default:
+            return false
+        }
     }
 
     private func currentToolDisplayName(for toolName: String) -> String {
