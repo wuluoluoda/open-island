@@ -59,7 +59,7 @@ Keep all work incremental, reviewable, and reversible. Every meaningful round of
 - If multiple agents are working in parallel and isolation is required, use separate branches or create worktrees only after the user asks for that setup.
 - All PRs must target `main`. Do not chain PRs through another feature branch unless the user explicitly requests that structure.
 
-Worktrees are an optional isolation playbook, not the default workflow. Only create one when the user explicitly asks for a worktree or parallel isolated checkout; when doing so, follow [docs/worktree-workflow.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/docs/worktree-workflow.md).
+Worktrees are an optional isolation mechanism, not the default workflow. Only create one when the user explicitly asks for a worktree or parallel isolated checkout; when doing so, use [docs/worktree-workflow.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/docs/worktree-workflow.md) as the reference playbook.
 See [.codex/skills/open-island-workflow/SKILL.md](/Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-workflow/SKILL.md) for the local runtime, tag, and dev/main promotion workflow.
 
 ## Product Boundaries

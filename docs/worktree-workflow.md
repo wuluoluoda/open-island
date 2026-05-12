@@ -1,9 +1,9 @@
-# Worktree Playbook
+# Worktree Reference Playbook
 
-This is an optional isolation playbook, not the default repository workflow.
-Use it only when the user explicitly asks for a worktree, asks for parallel
-isolated checkouts, or agrees that a risky/long-running slice should be kept
-outside the current checkout.
+This is the reference playbook for the optional worktree rule in `AGENTS.md`.
+It is not the default repository workflow. Use it only when the user explicitly
+asks for a worktree, asks for parallel isolated checkouts, or agrees that a
+risky/long-running slice should be kept outside the current checkout.
 
 For ordinary Codex work, follow `AGENTS.md` and
 `.codex/skills/open-island-workflow/SKILL.md`: work in the current checkout on
