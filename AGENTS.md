@@ -16,6 +16,7 @@ Keep all work incremental, reviewable, and reversible. Every meaningful round of
 6. Summarize what changed, including any verification gaps.
 7. Commit the round on the feature branch before stopping.
 8. When a change is intended for local app testing, refresh the running dev app from the current checkout and branch.
+9. Do not merge, fast-forward, or otherwise integrate the completed branch into `dev`, `main`, or another local testing branch unless the user explicitly asks for that integration.
 
 ## Commit Policy
 
@@ -24,6 +25,7 @@ Keep all work incremental, reviewable, and reversible. Every meaningful round of
 - Use clear conventional-style commit messages such as `feat:`, `fix:`, `refactor:`, `docs:`, or `chore:`.
 - Do not amend existing commits unless explicitly requested.
 - Create a feature branch for every independent change. Do not commit directly to `main`.
+- Do not self-merge completed work into `dev` or any shared/testing branch. Leave integration for explicit user instruction.
 - Push feature branches and open PRs when the user asks for remote review or integration.
 
 ## Safety Rules
@@ -48,6 +50,7 @@ Keep all work incremental, reviewable, and reversible. Every meaningful round of
 - Use a focused topic branch in the current checkout unless the user explicitly asks to stay on the current branch.
 - Do not create a new Git worktree unless the user explicitly asks for one.
 - When fixing behavior in the currently running local dev app, branch from the current `dev` state in this checkout and state that choice explicitly.
+- After committing the fix, stay on the topic branch. Do not merge or fast-forward it back into `dev` unless the user explicitly asks.
 - Use branch names that match the workstream, such as `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, or `investigate/<topic>`.
 - Keep each branch focused on one coherent slice with a narrow file ownership area when possible.
 - Rebase or merge the latest `origin/main` into the feature branch before integrating it back.

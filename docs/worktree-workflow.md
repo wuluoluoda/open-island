@@ -27,6 +27,8 @@ Rules:
 - Refresh `~/Applications/Open Island Dev.app` from the current checkout and
   branch when bundle semantics, LaunchServices, or installed-hook behavior
   matter.
+- Do not merge or fast-forward completed work into `dev` or another local
+  testing branch unless the user explicitly asks for that integration.
 
 ### 2. Topic branches
 
@@ -77,6 +79,8 @@ Then follow the normal repository workflow:
 2. make one coherent change
 3. verify the change
 4. commit before stopping
+5. stop on the topic branch unless the user explicitly asks you to integrate it
+   into `dev`, `main`, or another branch
 
 If the branch needs new `main` changes during development:
 

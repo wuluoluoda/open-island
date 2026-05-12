@@ -32,5 +32,6 @@ Follow the user's current local Open Island workflow. Create or switch to a topi
 ## Finish
 
 1. Commit every completed file-changing round on the topic branch with a conventional message.
-2. Do not push, tag, or open a PR unless the user asks, or the repository workflow for the exact task explicitly requires it and the user has agreed.
-3. Summarize changed files, verification, branch, and commit hash.
+2. Do not merge, fast-forward, or otherwise integrate the topic branch into `dev`, `main`, or another local testing branch unless the user explicitly asks for that integration.
+3. Do not push, tag, or open a PR unless the user asks, or the repository workflow for the exact task explicitly requires it and the user has agreed.
+4. Summarize changed files, verification, branch, and commit hash.
