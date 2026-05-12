@@ -1008,10 +1008,7 @@ final class AppModel {
                 .max() ?? status.radarSortPriority
             let sortedSessions = sessions.sorted { $0.updatedAt > $1.updatedAt }
             let latestSession = sortedSessions.first ?? topSession
-            let latestSummary = latestSession.latestUserPromptText?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .nonEmpty
-                ?? latestSession.summary
+            let latestSummary = latestSession.summary
 
             return CodexRadarProject(
                 id: projectName.lowercased(),

@@ -1896,7 +1896,7 @@ struct AppModelSessionListTests {
         #expect(radar.first?.topStatus == .waitingApproval)
         #expect(radar.first?.runningTaskCount == 1)
         #expect(radar.first?.actionableTaskCount == 1)
-        #expect(radar.first?.latestSummary == "Ship alpha patch")
+        #expect(radar.first?.latestSummary == "Needs approval")
         #expect(radar.first?.primarySessionID == "codex-approval")
     }
 

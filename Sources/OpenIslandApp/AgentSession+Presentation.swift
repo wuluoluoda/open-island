@@ -154,40 +154,19 @@ extension AgentSession {
             headline += " (\(branch))"
         }
 
-        guard let prompt = spotlightHeadlinePromptText else {
-            return headline
-        }
-
-        return "\(headline) · \(prompt)"
-    }
-
-    var spotlightHeadlinePromptText: String? {
-        if prefersLivePromptHeadline {
-            return latestPromptText ?? initialPromptText
-        }
-
-        return initialPromptText ?? latestPromptText
+        return headline
     }
 
     var spotlightPromptText: String? {
-        latestPromptText
+        nil
     }
 
     var spotlightPromptLineText: String? {
-        guard spotlightShowsDetailLines,
-              let prompt = spotlightPromptText else {
-            return nil
-        }
-
-        return "You: \(prompt)"
+        nil
     }
 
     var notificationHeaderPromptLineText: String? {
-        guard phase != .completed else {
-            return nil
-        }
-
-        return spotlightPromptLineText
+        nil
     }
 
     var spotlightActivityLineText: String? {
@@ -210,7 +189,7 @@ extension AgentSession {
             if let activity = spotlightRunningActivityText {
                 return activity
             }
-            return spotlightPromptLineText == nil ? "Running" : "Input"
+            return "Running"
         case .waitingForApproval:
             return permissionRequest?.summary.trimmedForSurface ?? "Approval needed"
         case .waitingForAnswer:
@@ -349,27 +328,6 @@ extension AgentSession {
         }
     }
 
-    private var initialPromptText: String? {
-        let prompt = initialUserPromptText?.trimmedForSurface
-        guard let prompt, !prompt.isEmpty else {
-            return nil
-        }
-
-        return prompt
-    }
-
-    private var latestPromptText: String? {
-        let prompt = latestUserPromptText?.trimmedForSurface
-        guard let prompt, !prompt.isEmpty else {
-            return nil
-        }
-
-        return prompt
-    }
-
-    private var prefersLivePromptHeadline: Bool {
-        isProcessAlive || phase == .running || phase.requiresAttention
-    }
 }
 
 private extension String {

@@ -1985,9 +1985,6 @@ private struct IslandSessionRow: View {
     // MARK: - Actionable helpers
 
     private var completionPromptLabel: String {
-        if let prompt = session.latestUserPromptText?.trimmedForNotificationCard, !prompt.isEmpty {
-            return "You: \(prompt)"
-        }
         return "You:"
     }
 

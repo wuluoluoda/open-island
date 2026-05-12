@@ -99,7 +99,7 @@ struct AgentSessionPresentationTests {
     }
 
     @Test
-    func liveHeadlineUsesLatestPromptForAttachedSession() {
+    func liveHeadlineHidesLatestPromptForAttachedSession() {
         let session = AgentSession(
             id: "session-1",
             title: "Codex · worktree",
@@ -123,12 +123,12 @@ struct AgentSessionPresentationTests {
             )
         )
 
-        #expect(session.spotlightHeadlineText == "worktree · Now make the overlay height fit the content.")
-        #expect(session.spotlightPromptLineText == "You: Now make the overlay height fit the content.")
+        #expect(session.spotlightHeadlineText == "worktree")
+        #expect(session.spotlightPromptLineText == nil)
     }
 
     @Test
-    func detachedSessionHeadlineShowsInitialPrompt() {
+    func detachedSessionHeadlineHidesInitialPrompt() {
         let session = AgentSession(
             id: "session-1",
             title: "Codex · worktree",
@@ -145,12 +145,12 @@ struct AgentSessionPresentationTests {
             )
         )
 
-        #expect(session.spotlightHeadlineText == "worktree · Start by fixing the island hover behavior.")
-        #expect(session.spotlightPromptLineText == "You: Now make the overlay height fit the content.")
+        #expect(session.spotlightHeadlineText == "worktree")
+        #expect(session.spotlightPromptLineText == nil)
     }
 
     @Test
-    func completedSessionShowsDifferentHeadlineAndPrompt() {
+    func completedSessionHidesPromptText() {
         let now = Date.now
         let session = AgentSession(
             id: "session-1",
@@ -175,8 +175,8 @@ struct AgentSessionPresentationTests {
             )
         )
 
-        #expect(session.spotlightHeadlineText == "worktree · Commit the README change.")
-        #expect(session.spotlightPromptLineText == "You: Also confirm the worktree status.")
+        #expect(session.spotlightHeadlineText == "worktree")
+        #expect(session.spotlightPromptLineText == nil)
         #expect(session.notificationHeaderPromptLineText == nil)
     }
 
