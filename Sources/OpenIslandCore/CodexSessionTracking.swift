@@ -253,6 +253,25 @@ public final class CodexRolloutDiscovery: @unchecked Sendable {
             .appendingPathComponent(".codex/sessions", isDirectory: true)
     }
 
+    public static func forkedFromID(atPath path: String, maxBytes: Int = 16 * 1_024) -> String? {
+        guard maxBytes > 0,
+              let fileHandle = try? FileHandle(forReadingFrom: URL(fileURLWithPath: path)) else {
+            return nil
+        }
+        defer {
+            try? fileHandle.close()
+        }
+
+        guard let data = try? fileHandle.read(upToCount: maxBytes) else {
+            return nil
+        }
+
+        let prefix = String(decoding: data, as: UTF8.self)
+        let firstLine = prefix.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false).first
+            .map(String.init) ?? prefix
+        return firstJSONLineValue(named: "forked_from_id", in: firstLine)
+    }
+
     private let rootURL: URL
     private let fileManager: FileManager
     private let maxAge: TimeInterval
@@ -409,6 +428,34 @@ public final class CodexRolloutDiscovery: @unchecked Sendable {
                 ),
                 originator: payload["originator"] as? String
             )
+        }
+
+        return nil
+    }
+
+    private static func firstJSONLineValue(named key: String, in text: String) -> String? {
+        guard let keyRange = text.range(of: "\"\(key)\""),
+              let colonRange = text.range(of: ":", range: keyRange.upperBound..<text.endIndex) else {
+            return nil
+        }
+
+        var cursor = colonRange.upperBound
+        while cursor < text.endIndex, text[cursor].isWhitespace {
+            cursor = text.index(after: cursor)
+        }
+
+        guard cursor < text.endIndex, text[cursor] == "\"" else {
+            return nil
+        }
+
+        cursor = text.index(after: cursor)
+        let valueStart = cursor
+        while cursor < text.endIndex {
+            if text[cursor] == "\"" {
+                let value = String(text[valueStart..<cursor])
+                return value.isEmpty ? nil : value
+            }
+            cursor = text.index(after: cursor)
         }
 
         return nil

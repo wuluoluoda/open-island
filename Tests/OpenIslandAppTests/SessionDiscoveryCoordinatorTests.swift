@@ -108,8 +108,13 @@ struct SessionDiscoveryCoordinatorTests {
     }
 
     @Test
-    func codexAppSyncIncludesRecentUntrackedNotLoadedThreadFromAllThreads() throws {
-        let forkShell = try codexThread(id: "fork-shell", status: "notLoaded", updatedAt: 1_950)
+    func codexAppSyncIncludesRecentUntrackedForkedThreadFromAllThreads() throws {
+        let forkShell = try codexThread(
+            id: "fork-shell",
+            status: "notLoaded",
+            updatedAt: 1_950,
+            forkedFromId: "parent-thread"
+        )
 
         let threads = CodexAppServerCoordinator.syncableThreads(
             loadedThreads: [],
@@ -120,6 +125,53 @@ struct SessionDiscoveryCoordinatorTests {
 
         #expect(threads.map(\.id) == ["fork-shell"])
         #expect(threads.first?.status.type == .notLoaded)
+    }
+
+    @Test
+    func codexAppSyncIncludesRecentUntrackedThreadWithForkedRolloutMarker() throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("open-island-app-fork-marker-\(UUID().uuidString)", isDirectory: true)
+        let rolloutURL = rootURL.appendingPathComponent("rollout-fork.jsonl")
+
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let line = """
+        {"type":"session_meta","payload":{"id":"fork-shell","forked_from_id":"parent-thread","timestamp":"2026-05-13T08:00:00.000Z","cwd":"/tmp/open-island","originator":"Codex Desktop"}}
+        """
+        try "\(line)\n".write(to: rolloutURL, atomically: true, encoding: .utf8)
+
+        let forkShell = try codexThread(
+            id: "fork-shell",
+            status: "notLoaded",
+            updatedAt: 1_950,
+            path: rolloutURL.path
+        )
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [],
+            allThreads: [forkShell],
+            now: Date(timeIntervalSince1970: 2_000),
+            isSessionTracked: { _ in false }
+        )
+
+        #expect(threads.map(\.id) == ["fork-shell"])
+    }
+
+    @Test
+    func codexAppSyncSkipsRecentUntrackedNonForkedThreadFromAllThreads() throws {
+        let regularShell = try codexThread(id: "regular-shell", status: "notLoaded", updatedAt: 1_950)
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [],
+            allThreads: [regularShell],
+            now: Date(timeIntervalSince1970: 2_000),
+            isSessionTracked: { _ in false }
+        )
+
+        #expect(threads.isEmpty)
     }
 
     @Test
@@ -313,10 +365,19 @@ private func codexSession(id: String, transcriptPath: String) -> AgentSession {
     )
 }
 
-private func codexThread(id: String, status: String, updatedAt: Int) throws -> CodexThread {
+private func codexThread(
+    id: String,
+    status: String,
+    updatedAt: Int,
+    forkedFromId: String? = nil,
+    path: String? = nil
+) throws -> CodexThread {
+    let forkedFromIdJSON = forkedFromId.map { "\"\($0)\"" } ?? "null"
+    let pathJSON = path.map { "\"\($0)\"" } ?? "\"/tmp/rollout-\(id).jsonl\""
     let json = """
     {
       "id": "\(id)",
+      "forkedFromId": \(forkedFromIdJSON),
       "cwd": "/tmp/open-island",
       "name": null,
       "preview": "",
@@ -324,7 +385,7 @@ private func codexThread(id: String, status: String, updatedAt: Int) throws -> C
       "createdAt": 1000,
       "updatedAt": \(updatedAt),
       "ephemeral": false,
-      "path": "/tmp/rollout-\(id).jsonl",
+      "path": \(pathJSON),
       "status": { "type": "\(status)" },
       "source": "vscode",
       "turns": null

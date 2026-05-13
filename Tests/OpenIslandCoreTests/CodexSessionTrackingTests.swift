@@ -814,6 +814,36 @@ struct CodexSessionTrackingTests {
         #expect(records.first?.jumpTarget?.codexThreadID == "codex-desktop-session")
         #expect(records.first?.session.isCodexAppSession == true)
     }
+
+    @Test
+    func codexRolloutDiscoveryReadsForkMarkerFromSessionMetaPrefix() throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("open-island-fork-marker-\(UUID().uuidString)", isDirectory: true)
+        let rolloutURL = rootURL.appendingPathComponent("rollout-fork.jsonl")
+
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let line = rolloutLine(
+            timestamp: "2026-05-13T08:00:00.000Z",
+            type: "session_meta",
+            payload: [
+                "id": "fork-thread",
+                "forked_from_id": "parent-thread",
+                "timestamp": "2026-05-13T08:00:00.000Z",
+                "cwd": "/tmp/open-island",
+                "originator": "Codex Desktop",
+                "base_instructions": [
+                    "text": String(repeating: "instructions ", count: 1_000),
+                ],
+            ]
+        )
+        try "\(line)\n".write(to: rolloutURL, atomically: true, encoding: .utf8)
+
+        #expect(CodexRolloutDiscovery.forkedFromID(atPath: rolloutURL.path) == "parent-thread")
+    }
 }
 
 private actor EventRecorder {

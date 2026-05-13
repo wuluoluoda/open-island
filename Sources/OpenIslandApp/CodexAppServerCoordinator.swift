@@ -310,10 +310,25 @@ final class CodexAppServerCoordinator {
 
         switch thread.status.type {
         case .idle, .notLoaded:
-            return TimeInterval(thread.updatedAt) >= cutoff
+            guard TimeInterval(thread.updatedAt) >= cutoff else {
+                return false
+            }
+            return hasForkHint(thread)
         case .active, .systemError:
             return false
         }
+    }
+
+    private nonisolated static func hasForkHint(_ thread: CodexThread) -> Bool {
+        if thread.forkedFromId?.isEmpty == false {
+            return true
+        }
+
+        guard let path = thread.path, !path.isEmpty else {
+            return false
+        }
+
+        return CodexRolloutDiscovery.forkedFromID(atPath: path) != nil
     }
 
     // MARK: - Notification handling
