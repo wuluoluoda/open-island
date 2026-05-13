@@ -103,6 +103,19 @@
 - Verification: Ran git diff --check and searched the workflow docs/skill for the new no-auto-merge wording.
 - Rollback: Revert commit 5b30e44955f3b8c957f50dd80823a8fb6ad37fb8 in /Users/wuluoluo/work/code.app.org/open-vibe-island.
 
+#### 2026-05-13T23:30:04+08:00 Add Open Island dev worktree cleanup skill
+
+- Kind: skill
+- Scope: project
+- Skill: open-island-dev-worktree-cleanup, open-island-workflow
+- Entry ID: 20260513233004-add-open-island-dev-worktree-cleanup-skill
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: /Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-dev-worktree-cleanup/SKILL.md;/Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-workflow/SKILL.md
+- Summary: Added a project skill for explicit dev-based worktree cleanup after integration, and updated open-island-workflow so topic branch rules also apply inside explicitly requested worktrees.
+- Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
+- Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
+- Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
+
 ## Skill: dev-main-release
 
 - Scope: project
@@ -154,3 +167,29 @@
 - Reason: Keep the project multi-agent while allowing Codex- or other agent-specific work to stay focused.
 - Verification: Manual frontmatter sanity check passed; quick_validate.py could not run because PyYAML is unavailable in the local Python environment.
 - Rollback: Remove .codex/skills/open-island-agent-reuse/SKILL.md and the matching audit entry if the skill is no longer wanted.
+
+## Skill: open-island-dev-worktree-cleanup
+
+- Scope: project
+- Project path: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Current skill name: open-island-dev-worktree-cleanup
+- Name history:
+  - open-island-dev-worktree-cleanup (observed by codex-audit-log)
+- Lifecycle history:
+  - active (observed by codex-audit-log)
+
+### Entries
+
+#### 2026-05-13T23:30:04+08:00 Add Open Island dev worktree cleanup skill
+
+- Kind: skill
+- Scope: project
+- Skill: open-island-dev-worktree-cleanup, open-island-workflow
+- Entry ID: 20260513233004-add-open-island-dev-worktree-cleanup-skill
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: /Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-dev-worktree-cleanup/SKILL.md;/Users/wuluoluo/work/code.app.org/open-vibe-island/.codex/skills/open-island-workflow/SKILL.md
+- Summary: Added a project skill for explicit dev-based worktree cleanup after integration, and updated open-island-workflow so topic branch rules also apply inside explicitly requested worktrees.
+- Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
+- Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
+- Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
+

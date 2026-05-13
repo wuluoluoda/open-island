@@ -1,20 +1,21 @@
 ---
 name: open-island-workflow
-description: Use when working on this Open Island / open-vibe-island repository, especially tasks that mention Open Island, Vibe Island, Codex island suite, local dev app testing, repo workflow, branches, commits, tags, or performance fixes. Enforces the user's current branch-only workflow and repository verification expectations.
+description: Use when working on this Open Island / open-vibe-island repository, especially tasks that mention Open Island, Vibe Island, Codex island suite, local dev app testing, repo workflow, branches, worktrees, commits, tags, or performance fixes. Enforces the user's current topic-branch or explicitly requested worktree workflow and repository verification expectations.
 ---
 
 # Open Island Workflow
 
 ## Overview
 
-Follow the user's current local Open Island workflow. Create or switch to a topic branch in the current checkout; do not create a new git worktree unless the user explicitly asks for one.
+Follow the user's current local Open Island workflow. Create or switch to a topic branch in the current checkout by default; create a git worktree only when the user explicitly asks for one.
 
 ## Start
 
 1. Run `git status -sb` in the repository before edits.
 2. Read `AGENTS.md`, `CLAUDE.md`, or relevant docs when the task touches workflow, release, app launch, hooks, verification, or integration expectations.
 3. If not already on a focused branch, create or switch to a topic branch in the current checkout, for example `fix/performance-hotspots`.
-4. If older repository docs say to create a worktree, treat that as superseded by the user's branch-only preference unless the user reaffirms worktrees for the task.
+4. When the user explicitly asks for a worktree, treat that worktree's branch as the focused topic branch and apply the same branch, edit, verify, and commit rules inside it.
+5. If older repository docs say to create a worktree, treat that as superseded by the default in-checkout branch preference unless the user reaffirms worktrees for the task.
 
 ## Editing
 
@@ -31,7 +32,8 @@ Follow the user's current local Open Island workflow. Create or switch to a topi
 
 ## Finish
 
-1. Commit every completed file-changing round on the topic branch with a conventional message.
+1. Commit every completed file-changing round on the topic branch, including a worktree-owned branch, with a conventional message.
 2. Do not merge, fast-forward, or otherwise integrate the topic branch into `dev`, `main`, or another local testing branch unless the user explicitly asks for that integration.
 3. Do not push, tag, or open a PR unless the user asks, or the repository workflow for the exact task explicitly requires it and the user has agreed.
-4. Summarize changed files, verification, branch, and commit hash.
+4. Summarize changed files, verification, branch, commit hash, and worktree path when a worktree was used.
+5. For a worktree created from `dev`, use the `open-island-dev-worktree-cleanup` skill after successful integration so the worktree is removed instead of left behind.
