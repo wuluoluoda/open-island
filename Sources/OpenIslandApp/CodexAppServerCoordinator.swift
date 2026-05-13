@@ -67,6 +67,7 @@ final class CodexAppServerCoordinator {
     private static let reconnectDelay: Duration = .seconds(2)
     private static let maxReconnectDelay: Duration = .seconds(20)
     private static let healthCheckInterval: Duration = .seconds(15)
+    nonisolated private static let recentUntrackedThreadSyncWindow: TimeInterval = 600
 
     // MARK: - Public API
 
@@ -210,9 +211,11 @@ final class CodexAppServerCoordinator {
             throw firstError
         }
 
+        let now = Date()
         let syncableThreads = Self.syncableThreads(
             loadedThreads: loadedThreads,
             allThreads: allThreads,
+            now: now,
             isSessionTracked: { [isSessionTracked] id in
                 isSessionTracked?(id) == true
             }
@@ -222,7 +225,7 @@ final class CodexAppServerCoordinator {
             syncableThreads: syncableThreads,
             needsFallbackRefresh: Self.hasRecentUnsyncedFallbackCandidate(
                 in: allThreads,
-                now: Date(),
+                now: now,
                 isSessionTracked: { [isSessionTracked] id in
                     isSessionTracked?(id) == true
                 }
@@ -233,6 +236,8 @@ final class CodexAppServerCoordinator {
     nonisolated static func syncableThreads(
         loadedThreads: [CodexThread],
         allThreads: [CodexThread],
+        now: Date = Date(),
+        recentUntrackedMaxAge: TimeInterval = recentUntrackedThreadSyncWindow,
         isSessionTracked: (String) -> Bool
     ) -> [CodexThread] {
         var threadsByID: [String: CodexThread] = [:]
@@ -242,7 +247,15 @@ final class CodexAppServerCoordinator {
         }
 
         for thread in allThreads where !thread.ephemeral {
-            guard thread.status.type == .active || isSessionTracked(thread.id) else {
+            guard thread.status.type == .active
+                    || isSessionTracked(thread.id)
+                    || isRecentUntrackedListThread(
+                        thread,
+                        now: now,
+                        maxAge: recentUntrackedMaxAge,
+                        isSessionTracked: isSessionTracked
+                    )
+            else {
                 continue
             }
 
@@ -280,6 +293,26 @@ final class CodexAppServerCoordinator {
             }
 
             return TimeInterval(thread.updatedAt) >= cutoff
+        }
+    }
+
+    private nonisolated static func isRecentUntrackedListThread(
+        _ thread: CodexThread,
+        now: Date,
+        maxAge: TimeInterval,
+        isSessionTracked: (String) -> Bool
+    ) -> Bool {
+        let cutoff = now.timeIntervalSince1970 - maxAge
+        guard !thread.ephemeral,
+              !isSessionTracked(thread.id) else {
+            return false
+        }
+
+        switch thread.status.type {
+        case .idle, .notLoaded:
+            return TimeInterval(thread.updatedAt) >= cutoff
+        case .active, .systemError:
+            return false
         }
     }
 

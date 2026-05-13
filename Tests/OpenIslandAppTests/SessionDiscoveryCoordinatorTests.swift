@@ -99,6 +99,7 @@ struct SessionDiscoveryCoordinatorTests {
         let threads = CodexAppServerCoordinator.syncableThreads(
             loadedThreads: [],
             allThreads: [idle],
+            now: Date(timeIntervalSince1970: 2_000),
             isSessionTracked: { $0 == "tracked" }
         )
 
@@ -107,12 +108,28 @@ struct SessionDiscoveryCoordinatorTests {
     }
 
     @Test
-    func codexAppSyncSkipsUntrackedIdleThreadFromAllThreads() throws {
-        let idle = try codexThread(id: "untracked", status: "idle", updatedAt: 1_950)
+    func codexAppSyncIncludesRecentUntrackedNotLoadedThreadFromAllThreads() throws {
+        let forkShell = try codexThread(id: "fork-shell", status: "notLoaded", updatedAt: 1_950)
+
+        let threads = CodexAppServerCoordinator.syncableThreads(
+            loadedThreads: [],
+            allThreads: [forkShell],
+            now: Date(timeIntervalSince1970: 2_000),
+            isSessionTracked: { _ in false }
+        )
+
+        #expect(threads.map(\.id) == ["fork-shell"])
+        #expect(threads.first?.status.type == .notLoaded)
+    }
+
+    @Test
+    func codexAppSyncSkipsOldUntrackedIdleThreadFromAllThreads() throws {
+        let idle = try codexThread(id: "untracked", status: "idle", updatedAt: 1_000)
 
         let threads = CodexAppServerCoordinator.syncableThreads(
             loadedThreads: [],
             allThreads: [idle],
+            now: Date(timeIntervalSince1970: 2_000),
             isSessionTracked: { _ in false }
         )
 
@@ -127,6 +144,7 @@ struct SessionDiscoveryCoordinatorTests {
         let threads = CodexAppServerCoordinator.syncableThreads(
             loadedThreads: [active],
             allThreads: [olderIdle],
+            now: Date(timeIntervalSince1970: 2_000),
             isSessionTracked: { $0 == "tracked" }
         )
 

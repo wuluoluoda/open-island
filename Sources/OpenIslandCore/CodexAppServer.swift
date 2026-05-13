@@ -5,6 +5,8 @@ import Foundation
 /// A Codex thread as reported by the app-server JSON-RPC protocol.
 public struct CodexThread: Codable, Sendable {
     public let id: String
+    public let sessionId: String?
+    public let forkedFromId: String?
     public let cwd: String
     public let name: String?
     public let preview: String

@@ -10,6 +10,8 @@ struct CodexAppServerTests {
           "data": [
             {
               "id": "thread-1",
+              "sessionId": "thread-1",
+              "forkedFromId": "parent-thread",
               "cwd": "/tmp/open-island",
               "name": "Fix Codex detection",
               "preview": "Make Codex.app visible in the island.",
@@ -32,6 +34,8 @@ struct CodexAppServerTests {
         )
 
         #expect(result.threads.map(\.id) == ["thread-1"])
+        #expect(result.threads.first?.sessionId == "thread-1")
+        #expect(result.threads.first?.forkedFromId == "parent-thread")
         #expect(result.threads.first?.status.type == .notLoaded)
         #expect(result.threads.first?.path == "/tmp/rollout-thread-1.jsonl")
     }
