@@ -115,7 +115,6 @@
 - Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
 - Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
 - Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
-
 ## Skill: dev-main-release
 
 - Scope: project
@@ -192,4 +191,3 @@
 - Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
 - Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
 - Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
-
