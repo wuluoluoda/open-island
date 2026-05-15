@@ -720,6 +720,8 @@ struct IslandPanelView: View {
             typeWhisperPill(typeWhisperStatusTitle(snapshot), tint: tint)
                 .layoutPriority(1)
 
+            typeWhisperPill(typeWhisperUnloadCountTitle(snapshot.modelUnloadCountToday), tint: .white.opacity(0.52))
+
             if let modelLabel = typeWhisperCompactModelLabel(snapshot) {
                 Text(modelLabel)
                     .font(.system(size: 10.5, weight: .medium))
@@ -831,6 +833,10 @@ struct IslandPanelView: View {
             }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
+    }
+
+    private func typeWhisperUnloadCountTitle(_ count: Int) -> String {
+        "\(count) today"
     }
 
     private func memoryLabel(_ megabytes: Double) -> String {

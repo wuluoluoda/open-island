@@ -24,6 +24,7 @@ struct TypeWhisperSnapshot: Equatable, Sendable {
     var memoryCheckedAt: Date?
     var memoryError: String?
     var loadedSince: Date?
+    var modelUnloadCountToday: Int
 
     static let unloadedFootprintThresholdMegabytes = 300.0
     static let loadedFootprintThresholdMegabytes = 1_024.0
@@ -46,7 +47,8 @@ struct TypeWhisperSnapshot: Equatable, Sendable {
             memoryFootprintMegabytes: nil,
             memoryCheckedAt: nil,
             memoryError: nil,
-            loadedSince: nil
+            loadedSince: nil,
+            modelUnloadCountToday: 0
         )
     }
 
@@ -100,6 +102,7 @@ struct TypeWhisperSnapshot: Equatable, Sendable {
             apiServerEnabled.description,
             memoryFootprintMegabytes.map { String(Int($0.rounded())) } ?? "",
             memoryError ?? "",
+            String(modelUnloadCountToday),
         ].joined(separator: "|")
     }
 }
@@ -125,7 +128,18 @@ final class TypeWhisperMonitor {
     private var lastAutomaticFootprintDate: Date?
 
     @ObservationIgnored
+    private let defaults: UserDefaults
+
+    @ObservationIgnored
     var onSnapshotChanged: (() -> Void)?
+
+    private static let modelUnloadCountDefaultsKey = "feature.typeWhisper.modelUnloadCountToday"
+    private static let modelUnloadCountDayDefaultsKey = "feature.typeWhisper.modelUnloadCountDay"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        snapshot.modelUnloadCountToday = Self.storedModelUnloadCount(defaults: defaults, now: Date())
+    }
 
     func startMonitoringIfNeeded() {
         guard monitorTask == nil else {
@@ -224,7 +238,13 @@ final class TypeWhisperMonitor {
             }
         }
 
-        snapshot = Self.reconcileLoadedTiming(previous: previous, next: next, now: now)
+        var reconciled = Self.reconcileLoadedTiming(previous: previous, next: next, now: now)
+        reconciled.modelUnloadCountToday = recordModelUnloadIfNeeded(
+            previous: previous,
+            next: reconciled,
+            now: now
+        )
+        snapshot = reconciled
     }
 
     nonisolated static func canReuseMemoryFootprint(
@@ -299,6 +319,19 @@ final class TypeWhisperMonitor {
         return reconciled
     }
 
+    nonisolated static func nextModelUnloadCount(
+        previous: TypeWhisperSnapshot,
+        next: TypeWhisperSnapshot,
+        currentCount: Int
+    ) -> Int {
+        guard previous.resolvedLoadState == .loaded,
+              next.resolvedLoadState == .unloaded,
+              previous.processID == next.processID else {
+            return currentCount
+        }
+        return currentCount + 1
+    }
+
     nonisolated static func parsePhysFootprintMegabytes(from output: String) -> Double? {
         for line in output.split(whereSeparator: \.isNewline) {
             let text = String(line)
@@ -340,8 +373,49 @@ final class TypeWhisperMonitor {
             memoryFootprintMegabytes: nil,
             memoryCheckedAt: nil,
             memoryError: nil,
-            loadedSince: nil
+            loadedSince: nil,
+            modelUnloadCountToday: 0
         )
+    }
+
+    private func recordModelUnloadIfNeeded(
+        previous: TypeWhisperSnapshot,
+        next: TypeWhisperSnapshot,
+        now: Date
+    ) -> Int {
+        let currentCount = Self.storedModelUnloadCount(defaults: defaults, now: now)
+        let nextCount = Self.nextModelUnloadCount(
+            previous: previous,
+            next: next,
+            currentCount: currentCount
+        )
+        if nextCount != currentCount {
+            storeModelUnloadCount(nextCount, now: now)
+        }
+        return nextCount
+    }
+
+    private func storeModelUnloadCount(_ count: Int, now: Date) {
+        defaults.set(count, forKey: Self.modelUnloadCountDefaultsKey)
+        defaults.set(Self.dayIdentifier(for: now), forKey: Self.modelUnloadCountDayDefaultsKey)
+    }
+
+    private static func storedModelUnloadCount(defaults: UserDefaults, now: Date) -> Int {
+        guard defaults.string(forKey: modelUnloadCountDayDefaultsKey) == dayIdentifier(for: now) else {
+            defaults.set(0, forKey: modelUnloadCountDefaultsKey)
+            defaults.set(dayIdentifier(for: now), forKey: modelUnloadCountDayDefaultsKey)
+            return 0
+        }
+        return defaults.integer(forKey: modelUnloadCountDefaultsKey)
+    }
+
+    private static func dayIdentifier(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return [
+            components.year.map(String.init) ?? "0",
+            components.month.map(String.init) ?? "0",
+            components.day.map(String.init) ?? "0",
+        ].joined(separator: "-")
     }
 
     nonisolated private static func runningProcessID() -> Int32? {

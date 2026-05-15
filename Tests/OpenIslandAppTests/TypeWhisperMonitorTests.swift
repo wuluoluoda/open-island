@@ -119,6 +119,39 @@ struct TypeWhisperMonitorTests {
     }
 
     @Test
+    func unloadCounterIncrementsOnlyForLoadedToUnloadedTransitionsInSameProcess() {
+        let loaded = typeWhisperSnapshot(
+            loadedModel: "qwen3-asr-1.7b-6bit",
+            memoryMegabytes: 2_048
+        )
+        let unloaded = typeWhisperSnapshot(
+            loadedModel: nil,
+            memoryMegabytes: 26
+        )
+        let notRunning = typeWhisperSnapshot(
+            isRunning: false,
+            loadedModel: nil,
+            memoryMegabytes: nil
+        )
+
+        #expect(TypeWhisperMonitor.nextModelUnloadCount(
+            previous: loaded,
+            next: unloaded,
+            currentCount: 3
+        ) == 4)
+        #expect(TypeWhisperMonitor.nextModelUnloadCount(
+            previous: unloaded,
+            next: loaded,
+            currentCount: 3
+        ) == 3)
+        #expect(TypeWhisperMonitor.nextModelUnloadCount(
+            previous: loaded,
+            next: notRunning,
+            currentCount: 3
+        ) == 3)
+    }
+
+    @Test
     @MainActor
     func stopMonitoringCanClearSnapshotForDisabledFeature() {
         let monitor = TypeWhisperMonitor()
@@ -157,6 +190,7 @@ private func typeWhisperSnapshot(
         memoryFootprintMegabytes: memoryMegabytes,
         memoryCheckedAt: memoryMegabytes == nil ? nil : Date(timeIntervalSince1970: 1_000),
         memoryError: nil,
-        loadedSince: loadedSince
+        loadedSince: loadedSince,
+        modelUnloadCountToday: 0
     )
 }
