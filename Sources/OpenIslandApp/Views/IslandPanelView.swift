@@ -1624,6 +1624,9 @@ private struct OpenedHeaderMetrics {
 // MARK: - Session row (opened state)
 
 private struct IslandSessionRow: View {
+    private static let completedDotGreen = Color(red: 0.29, green: 0.86, blue: 0.46)
+    private static let completedDotClickedGreen = Color(red: 0.15, green: 0.58, blue: 0.30)
+
     let session: AgentSession
     let referenceDate: Date
     let operationalStatus: CodexOperationalStatus
@@ -1640,6 +1643,7 @@ private struct IslandSessionRow: View {
 
     @State private var isHighlighted = false
     @State private var isManuallyExpanded = false
+    @State private var hasClickedCompletedDot = false
     @State private var replyText: String = ""
 
     var body: some View {
@@ -1813,6 +1817,14 @@ private struct IslandSessionRow: View {
         .onChange(of: isInteractive) { _, interactive in
             if !interactive {
                 isManuallyExpanded = false
+            }
+        }
+        .onChange(of: session.id) { _, _ in
+            hasClickedCompletedDot = false
+        }
+        .onChange(of: session.phase) { _, phase in
+            if phase != .completed {
+                hasClickedCompletedDot = false
             }
         }
     }
@@ -2116,6 +2128,10 @@ private struct IslandSessionRow: View {
     }
 
     private func handlePrimaryTap() {
+        if usesCompletedDotClickFeedback {
+            hasClickedCompletedDot = true
+        }
+
         let rawPresence = session.islandPresence(at: referenceDate)
         if rawPresence == .inactive && !isManuallyExpanded {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -2123,6 +2139,15 @@ private struct IslandSessionRow: View {
             }
         } else {
             onJump()
+        }
+    }
+
+    private var usesCompletedDotClickFeedback: Bool {
+        switch operationalStatus {
+        case .recentlyCompleted, .completed:
+            return session.phase == .completed
+        default:
+            return false
         }
     }
 
@@ -2175,7 +2200,9 @@ private struct IslandSessionRow: View {
         case .running:
             return Color(red: 0.34, green: 0.61, blue: 0.99)
         case .active:
-            return Color(red: 0.29, green: 0.86, blue: 0.46)
+            return hasClickedCompletedDot && usesCompletedDotClickFeedback
+                ? Self.completedDotClickedGreen
+                : Self.completedDotGreen
         case .inactive:
             return .white.opacity(0.38)
         }
