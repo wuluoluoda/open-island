@@ -1624,8 +1624,8 @@ private struct OpenedHeaderMetrics {
 // MARK: - Session row (opened state)
 
 private struct IslandSessionRow: View {
-    private static let completedDotGreen = Color(red: 0.29, green: 0.86, blue: 0.46)
-    private static let completedDotClickedGreen = Color(red: 0.15, green: 0.58, blue: 0.30)
+    private static let completedDotGreen = Color(red: 0.24, green: 1.0, blue: 0.48)
+    private static let completedDotClickedGreen = Color(red: 0.04, green: 0.35, blue: 0.16)
 
     let session: AgentSession
     let referenceDate: Date
