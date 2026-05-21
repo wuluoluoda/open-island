@@ -99,7 +99,7 @@ struct AgentSessionPresentationTests {
     }
 
     @Test
-    func liveHeadlineHidesLatestPromptForAttachedSession() {
+    func runningHeadlineShowsLatestPromptForAttachedSession() {
         let session = AgentSession(
             id: "session-1",
             title: "Codex · worktree",
@@ -123,7 +123,7 @@ struct AgentSessionPresentationTests {
             )
         )
 
-        #expect(session.spotlightHeadlineText == "worktree")
+        #expect(session.spotlightHeadlineText == "worktree · Now make the overlay height fit the content.")
         #expect(session.spotlightPromptLineText == nil)
     }
 

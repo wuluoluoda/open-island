@@ -154,7 +154,19 @@ extension AgentSession {
             headline += " (\(branch))"
         }
 
+        if let prompt = spotlightHeadlinePromptText {
+            headline += " · \(prompt)"
+        }
+
         return headline
+    }
+
+    var spotlightHeadlinePromptText: String? {
+        guard phase == .running else {
+            return nil
+        }
+
+        return latestPromptText ?? initialPromptText
     }
 
     var spotlightPromptText: String? {
@@ -336,6 +348,24 @@ extension AgentSession {
         default:
             return toolName
         }
+    }
+
+    private var initialPromptText: String? {
+        let prompt = initialUserPromptText?.trimmedForSurface
+        guard let prompt, !prompt.isEmpty else {
+            return nil
+        }
+
+        return prompt
+    }
+
+    private var latestPromptText: String? {
+        let prompt = latestUserPromptText?.trimmedForSurface
+        guard let prompt, !prompt.isEmpty else {
+            return nil
+        }
+
+        return prompt
     }
 
 }
