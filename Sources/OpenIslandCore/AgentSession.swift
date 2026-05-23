@@ -261,6 +261,28 @@ public struct QuestionPrompt: Equatable, Identifiable, Codable, Sendable {
         self.questions = questions
         self.options = questions.first?.options.map(\.label) ?? []
     }
+
+    public var selectableQuestions: [QuestionPromptItem] {
+        if !questions.isEmpty {
+            return questions
+        }
+
+        let selectableOptions = options
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !selectableOptions.isEmpty else {
+            return []
+        }
+
+        return [
+            QuestionPromptItem(
+                question: title,
+                header: "Choice",
+                options: selectableOptions.map { QuestionOption(label: $0) }
+            ),
+        ]
+    }
 }
 
 public struct QuestionAnswerAnnotation: Equatable, Codable, Sendable {

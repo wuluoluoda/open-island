@@ -2369,7 +2369,7 @@ private struct StructuredQuestionPromptView: View {
     // MARK: - Helpers
 
     private var structuredQuestions: [QuestionPromptItem] {
-        prompt?.questions ?? []
+        prompt?.selectableQuestions ?? []
     }
 
     private var promptTitle: String {
@@ -2400,7 +2400,11 @@ private struct StructuredQuestionPromptView: View {
     }
 
     private var hasCompleteSelection: Bool {
-        structuredQuestions.allSatisfy { question in
+        guard !structuredQuestions.isEmpty else {
+            return false
+        }
+
+        return structuredQuestions.allSatisfy { question in
             let selected = selectedLabels(for: question)
             guard !selected.isEmpty else {
                 return false

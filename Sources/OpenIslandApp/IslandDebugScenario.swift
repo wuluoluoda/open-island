@@ -18,6 +18,7 @@ enum IslandDebugScenario: String, CaseIterable, Identifiable {
     case sessionList
     case approvalCard
     case questionCard
+    case legacyQuestionCard
     case completionCard
     case longCompletionCard
 
@@ -33,6 +34,8 @@ enum IslandDebugScenario: String, CaseIterable, Identifiable {
             "Approval Card"
         case .questionCard:
             "Question Card"
+        case .legacyQuestionCard:
+            "Legacy Question Card"
         case .completionCard:
             "Completion Card"
         case .longCompletionCard:
@@ -50,6 +53,8 @@ enum IslandDebugScenario: String, CaseIterable, Identifiable {
             "Auto-expanded permission surface with approve and deny actions."
         case .questionCard:
             "Auto-expanded question surface with selectable answer buttons."
+        case .legacyQuestionCard:
+            "Auto-expanded legacy options question surface with selectable answer buttons."
         case .completionCard:
             "Auto-expanded finished-task reminder surface after a turn completes."
         case .longCompletionCard:
@@ -104,6 +109,19 @@ enum IslandDebugScenario: String, CaseIterable, Identifiable {
                 title: title,
                 summary: summary,
                 previewHeight: 270,
+                notchStatus: .opened,
+                notchOpenReason: .notification,
+                islandSurface: .sessionList(actionableSessionID: session.id),
+                sessions: DebugSessionFactory.notificationSessions(lead: session, now: now),
+                selectedSessionID: session.id
+            )
+
+        case .legacyQuestionCard:
+            let session = DebugSessionFactory.legacyQuestionSession(now: now)
+            return IslandDebugSnapshot(
+                title: title,
+                summary: summary,
+                previewHeight: 250,
                 notchStatus: .opened,
                 notchOpenReason: .notification,
                 islandSurface: .sessionList(actionableSessionID: session.id),
@@ -455,6 +473,33 @@ private enum DebugSessionFactory {
                 initialUserPrompt: "原产品看起来像是单 notch surface + 多 content surface。",
                 lastUserPrompt: "我们应该怎么做？",
                 lastAssistantMessage: "建议先把 approvalCard、questionCard、completionCard 拆成独立 surface。"
+            )
+        )
+    }
+
+    static func legacyQuestionSession(now: Date) -> AgentSession {
+        AgentSession(
+            id: "session-legacy-question",
+            title: "Codex · open-island",
+            tool: .codex,
+            origin: .demo,
+            phase: .waitingForAnswer,
+            summary: "计划验证重点选哪一个？",
+            updatedAt: now.addingTimeInterval(-18),
+            questionPrompt: QuestionPrompt(
+                title: "计划验证重点选哪一个？",
+                options: ["展示选项即可", "选择后提交", "观察是否低能耗"]
+            ),
+            jumpTarget: JumpTarget(
+                terminalApp: "Codex.app",
+                workspaceName: "open-island",
+                paneTitle: "Codex selection test",
+                workingDirectory: "/Users/wangruobing/Personal/open-island"
+            ),
+            codexMetadata: CodexSessionMetadata(
+                initialUserPrompt: "做一个需要选择验证重点的小计划。",
+                lastUserPrompt: "计划验证重点选哪一个？",
+                lastAssistantMessage: "请选择一个验证重点后继续。"
             )
         )
     }
