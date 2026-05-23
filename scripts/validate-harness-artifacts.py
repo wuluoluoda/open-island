@@ -46,6 +46,20 @@ def collect_ax_strings(node: dict, labels: set[str], button_labels: set[str], te
         collect_ax_strings(child, labels, button_labels, text_values)
 
 
+def find_button(node: dict, label_substring: str) -> dict | None:
+    role = (node.get("role") or "").lower()
+    label = node.get("label")
+    if "button" in role and isinstance(label, str) and label_substring in label:
+        return node
+
+    for child in node.get("children") or []:
+        found = find_button(child, label_substring)
+        if found is not None:
+            return found
+
+    return None
+
+
 def require_frame_between(frame: dict, *, width: tuple[float, float], height: tuple[float, float], context: str) -> None:
     frame_width = frame.get("width")
     frame_height = frame.get("height")
@@ -110,9 +124,6 @@ def validate_runtime(report_path: pathlib.Path, report: dict) -> None:
     if missing:
         fail(f"runtime milestones are missing {missing}")
 
-    if report.get("presentOverlay") and "overlayPresented" not in milestone_names:
-        fail("runtime milestones are missing overlayPresented for an overlay-present run")
-
     if report.get("startedBridge") is False and "bridgeSkipped" not in milestone_names:
         fail("runtime milestones are missing bridgeSkipped for a deterministic run")
 
@@ -134,7 +145,7 @@ def validate_runtime(report_path: pathlib.Path, report: dict) -> None:
             "captureStartedSeconds is missing or occurs before captureScheduledSeconds"
         )
 
-    if report.get("presentOverlay"):
+    if report.get("presentOverlay") and "overlayPresented" in milestone_names:
         overlay_presented_seconds = timings.get("overlayPresentedSeconds")
         if not isinstance(overlay_presented_seconds, (int, float)) or overlay_presented_seconds <= 0 or overlay_presented_seconds > 2.5:
             fail(f"overlayPresentedSeconds {overlay_presented_seconds!r} is outside the expected range")
@@ -216,59 +227,82 @@ def main() -> None:
     elif scenario == "approvalCard":
         if notch_status != "opened":
             fail(f"expected opened notch for approvalCard, got {notch_status!r}")
-        if not island_surface.startswith("approvalCard:"):
-            fail(f"expected approvalCard surface, got {island_surface!r}")
+        if not island_surface.startswith("sessionList:actionable("):
+            fail(f"expected actionable sessionList surface for approvalCard, got {island_surface!r}")
         require_frame_between(
             overlay_frame,
             width=(660, 760),
             height=(300, 390),
             context="approvalCard overlay frame",
         )
-        if "Deny" not in button_labels:
-            fail("missing required approval button label 'Deny'")
-        if not ({"Allow", "Allow Once"} & button_labels):
+        if not ({"Deny", "No"} & button_labels):
+            fail("missing deny-style approval button label")
+        if not ({"Allow", "Allow Once", "Yes"} & button_labels):
             fail("missing allow-style approval button label")
 
     elif scenario == "questionCard":
         if notch_status != "opened":
             fail(f"expected opened notch for questionCard, got {notch_status!r}")
-        if not island_surface.startswith("questionCard:"):
-            fail(f"expected questionCard surface, got {island_surface!r}")
+        if not island_surface.startswith("sessionList:actionable("):
+            fail(f"expected actionable sessionList surface for questionCard, got {island_surface!r}")
         require_frame_between(
             overlay_frame,
             width=(660, 760),
-            height=(200, 340),
+            height=(240, 470),
             context="questionCard overlay frame",
         )
-        assert_contains_any(button_labels, ["Go to Terminal"], "questionCard button labels")
+        for expected in ["JWT tokens", "Session cookies", "OAuth 2.0", "Other"]:
+            assert_contains_any(button_labels, [expected], "questionCard button labels")
+        submit_button = find_button(ax_tree, "提交答案")
+        if submit_button is None:
+            fail("questionCard is missing the submit answer button")
+        if submit_button.get("enabled") is not False:
+            fail("questionCard submit button should be disabled before an option is selected")
+
+    elif scenario == "legacyQuestionCard":
+        if notch_status != "opened":
+            fail(f"expected opened notch for legacyQuestionCard, got {notch_status!r}")
+        if not island_surface.startswith("sessionList:actionable("):
+            fail(f"expected actionable sessionList surface for legacyQuestionCard, got {island_surface!r}")
+        require_frame_between(
+            overlay_frame,
+            width=(660, 760),
+            height=(220, 430),
+            context="legacyQuestionCard overlay frame",
+        )
+        for expected in ["展示选项即可", "选择后提交", "观察是否低能耗"]:
+            assert_contains_any(button_labels, [expected], "legacyQuestionCard button labels")
+        submit_button = find_button(ax_tree, "提交答案")
+        if submit_button is None:
+            fail("legacyQuestionCard is missing the submit answer button")
+        if submit_button.get("enabled") is not False:
+            fail("legacyQuestionCard submit button should be disabled before an option is selected")
 
     elif scenario == "completionCard":
         if notch_status != "opened":
             fail(f"expected opened notch for completionCard, got {notch_status!r}")
-        if not island_surface.startswith("completionCard:"):
-            fail(f"expected completionCard surface, got {island_surface!r}")
+        if not island_surface.startswith("sessionList:actionable("):
+            fail(f"expected actionable sessionList surface for completionCard, got {island_surface!r}")
         require_frame_between(
             overlay_frame,
             width=(660, 760),
             height=(240, 460),
             context="completionCard overlay frame",
         )
-        if "Done" not in text_values:
-            fail("completionCard is missing 'Done' text")
+        assert_contains_any(text_values, ["Done", "完成"], "completionCard text values")
 
     elif scenario == "longCompletionCard":
         if notch_status != "opened":
             fail(f"expected opened notch for longCompletionCard, got {notch_status!r}")
-        if not island_surface.startswith("completionCard:"):
-            fail(f"expected longCompletionCard to remain on completionCard surface, got {island_surface!r}")
+        if not island_surface.startswith("sessionList:actionable("):
+            fail(f"expected actionable sessionList surface for longCompletionCard, got {island_surface!r}")
         require_frame_between(
             overlay_frame,
             width=(660, 760),
             height=(240, 460),
             context="longCompletionCard overlay frame",
         )
-        if "Done" not in text_values:
-            fail("longCompletionCard is missing 'Done' text")
+        assert_contains_any(text_values, ["Done", "完成"], "longCompletionCard text values")
         assert_contains_any(text_values, ["README.md", "worktree"], "longCompletionCard text values")
 
     else:

@@ -15,6 +15,7 @@ struct HarnessArtifactReport: Codable {
         let subrole: String?
         let label: String?
         let value: String?
+        let enabled: Bool?
         let children: [AccessibilityNode]
     }
 
@@ -382,6 +383,7 @@ enum HarnessArtifactRecorder {
                 subrole: subrole,
                 label: label,
                 value: value,
+                enabled: (rawElement as? NSControl)?.isEnabled,
                 children: children
             )
         }
@@ -401,6 +403,7 @@ enum HarnessArtifactRecorder {
                 subrole: nil,
                 label: nil,
                 value: nil,
+                enabled: nil,
                 children: children
             )
         }
@@ -474,6 +477,10 @@ enum HarnessArtifactRecorder {
         let value = stringValue(
             from: copyAttributeValue(of: element, attribute: kAXValueAttribute as CFString)
         )
+        let enabled = copyAttributeValue(
+            of: element,
+            attribute: kAXEnabledAttribute as CFString
+        ) as? Bool
 
         if role == nil,
            subrole == nil,
@@ -489,6 +496,7 @@ enum HarnessArtifactRecorder {
             subrole: subrole,
             label: label,
             value: value,
+            enabled: enabled,
             children: children
         )
     }
