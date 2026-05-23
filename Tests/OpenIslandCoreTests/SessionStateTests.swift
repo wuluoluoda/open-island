@@ -526,6 +526,37 @@ struct SessionStateTests {
     }
 
     @Test
+    func legacyQuestionOptionsNormalizeToSelectableQuestion() {
+        let prompt = QuestionPrompt(
+            title: "Which environment?",
+            options: [" Production ", "", "Staging"]
+        )
+
+        let selectableQuestions = prompt.selectableQuestions
+
+        #expect(selectableQuestions.count == 1)
+        #expect(selectableQuestions.first?.question == "Which environment?")
+        #expect(selectableQuestions.first?.options.map(\.label) == ["Production", "Staging"])
+        #expect(selectableQuestions.first?.multiSelect == false)
+    }
+
+    @Test
+    func structuredQuestionPromptKeepsProvidedQuestions() {
+        let question = QuestionPromptItem(
+            question: "Which checks?",
+            header: "Checks",
+            options: [
+                QuestionOption(label: "Unit tests"),
+                QuestionOption(label: "Lint"),
+            ],
+            multiSelect: true
+        )
+        let prompt = QuestionPrompt(title: "Claude has questions for you.", questions: [question])
+
+        #expect(prompt.selectableQuestions == [question])
+    }
+
+    @Test
     func bridgeQuestionCommandEmitsQuestionEventForExistingSession() async throws {
         let socketURL = BridgeSocketLocation.uniqueTestURL()
         let server = BridgeServer(socketURL: socketURL)
