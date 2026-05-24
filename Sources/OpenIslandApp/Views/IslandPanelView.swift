@@ -111,7 +111,6 @@ struct IslandPanelView: View {
     private static let headerControlSpacing: CGFloat = 8
     private static let headerHorizontalPadding: CGFloat = 18
     private static let headerTopPadding: CGFloat = 2
-    private static let typeWhisperHeaderToggleWidth: CGFloat = 54
     private static let notchLaneSafetyInset: CGFloat = 12
     private static let closedIdleEdgeHeight: CGFloat = 4
     private static let codexShelfTriggerHeight: CGFloat = 42
@@ -154,14 +153,8 @@ struct IslandPanelView: View {
         }
     }
 
-    private var typeWhisperClosedPresence: Bool {
-        model.typeWhisperStatusEnabled
-            && model.liveSessionCount == 0
-            && model.typeWhisperSnapshot.shouldSurface
-    }
-
     private var hasClosedPresence: Bool {
-        model.liveSessionCount > 0 || typeWhisperClosedPresence
+        model.liveSessionCount > 0
     }
 
     private var showsIdleEdgeWhenCollapsed: Bool {
@@ -170,16 +163,16 @@ struct IslandPanelView: View {
 
     /// Whether any session has activity worth showing in the closed notch
     private var hasClosedActivity: Bool {
-        if let session = closedSpotlightSession {
-            switch model.codexOperationalStatus(for: session) {
-            case .waitingApproval, .waitingInput, .reconnecting, .connecting, .interrupted, .detached, .stalled, .loopSuspected, .running:
-                return true
-            case .recentlyCompleted, .completed:
-                return false
-            }
+        guard let session = closedSpotlightSession else {
+            return false
         }
 
-        return typeWhisperClosedPresence && model.typeWhisperSnapshot.isLoaded
+        switch model.codexOperationalStatus(for: session) {
+        case .waitingApproval, .waitingInput, .reconnecting, .connecting, .interrupted, .detached, .stalled, .loopSuspected, .running:
+            return true
+        case .recentlyCompleted, .completed:
+            return false
+        }
     }
 
     private var closedSpotlightNeedsAction: Bool {
@@ -190,10 +183,7 @@ struct IslandPanelView: View {
     }
 
     private var closedActivityToolName: String? {
-        if let toolName = closedSpotlightSession?.currentToolName {
-            return toolName
-        }
-        return typeWhisperClosedPresence ? "TypeWhisper" : nil
+        closedSpotlightSession?.currentToolName
     }
 
     private var closedActivityPreview: String? {
@@ -203,10 +193,7 @@ struct IslandPanelView: View {
             }
             return session.currentCommandPreviewText
         }
-        guard typeWhisperClosedPresence else {
-            return nil
-        }
-        return typeWhisperStatusTitle(model.typeWhisperSnapshot)
+        return nil
     }
 
     private func shouldHideActivityPreview(for toolName: String?) -> Bool {
@@ -230,14 +217,11 @@ struct IslandPanelView: View {
         if !sessions.isEmpty {
             return Color(red: 0.26, green: 0.91, blue: 0.42) // #42E86B idle green
         }
-        if typeWhisperClosedPresence {
-            return typeWhisperTint(model.typeWhisperSnapshot)
-        }
         return Color.white.opacity(0.4) // gray
     }
 
     private var closedBadgeText: String {
-        model.liveSessionCount > 0 ? "\(model.liveSessionCount)" : "TW"
+        "\(model.liveSessionCount)"
     }
 
     private var countBadgeWidth: CGFloat {
@@ -292,8 +276,7 @@ struct IslandPanelView: View {
 
     private var openedHeaderButtonsWidth: CGFloat {
         (Self.headerControlButtonSize * 3)
-            + Self.typeWhisperHeaderToggleWidth
-            + (Self.headerControlSpacing * 3)
+            + (Self.headerControlSpacing * 2)
     }
 
     var body: some View {
@@ -441,11 +424,7 @@ struct IslandPanelView: View {
             HStack(spacing: 0) {
                 if hasClosedPresence {
                     HStack(spacing: 4) {
-                        if typeWhisperClosedPresence {
-                            typeWhisperIconView
-                                .frame(width: 18, height: 18)
-                                .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
-                        } else if model.isCustomAppearance {
+                        if model.isCustomAppearance {
                             IslandPixelGlyph(
                                 tint: scoutTint,
                                 style: model.islandPixelShapeStyle,
@@ -545,8 +524,6 @@ struct IslandPanelView: View {
                 model.toggleSoundMuted()
             }
 
-            typeWhisperHeaderToggle
-
             headerIconButton(systemName: "gearshape.fill", tint: .white.opacity(0.62)) {
                 model.showSettings()
             }
@@ -559,28 +536,6 @@ struct IslandPanelView: View {
                 showingQuitConfirmation = true
             }
         }
-    }
-
-    private var typeWhisperHeaderToggle: some View {
-        HStack(spacing: 4) {
-            typeWhisperIconView
-                .frame(width: 14, height: 14)
-
-            Toggle("", isOn: Binding(
-                get: { model.typeWhisperStatusEnabled },
-                set: { model.typeWhisperStatusEnabled = $0 }
-            ))
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .scaleEffect(0.72)
-            .frame(width: 30, height: 18)
-        }
-        .frame(width: Self.typeWhisperHeaderToggleWidth, height: Self.headerControlButtonSize)
-        .background(.white.opacity(0.08), in: Capsule())
-        .contentShape(Capsule())
-        .help("Show TypeWhisper status")
-        .accessibilityLabel("Show TypeWhisper status")
     }
 
     private func headerIconButton(
@@ -610,10 +565,6 @@ struct IslandPanelView: View {
         VStack(spacing: 8) {
             if !model.hasAnyInstalledAgent {
                 installHooksHint
-            }
-
-            if model.typeWhisperStatusEnabled && model.typeWhisperSnapshot.shouldSurface {
-                typeWhisperStatusPanel
             }
 
             if model.shouldShowSessionBootstrapPlaceholder {
@@ -701,149 +652,6 @@ struct IslandPanelView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var typeWhisperStatusPanel: some View {
-        let snapshot = model.typeWhisperSnapshot
-        let tint = typeWhisperTint(snapshot)
-
-        return HStack(spacing: 8) {
-            typeWhisperIconView
-                .frame(width: 20, height: 20)
-
-            Text("TypeWhisper")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .lineLimit(1)
-                .layoutPriority(2)
-
-            typeWhisperPill(typeWhisperStatusTitle(snapshot), tint: tint)
-                .layoutPriority(1)
-
-            typeWhisperPill(typeWhisperUnloadCountTitle(snapshot.modelUnloadCountToday), tint: .white.opacity(0.52))
-
-            if let modelLabel = typeWhisperCompactModelLabel(snapshot) {
-                Text(modelLabel)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-
-            if snapshot.apiServerEnabled {
-                typeWhisperPill("API on", tint: .orange.opacity(0.86))
-            }
-
-            Spacer(minLength: 8)
-
-            Button {
-                model.refreshTypeWhisperFootprint()
-            } label: {
-                Image(systemName: model.isRefreshingTypeWhisperFootprint ? "hourglass" : "arrow.clockwise")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.68))
-                    .frame(width: 24, height: 24)
-                    .background(Color.black.opacity(0.32), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-            }
-            .buttonStyle(.borderless)
-            .disabled(model.isRefreshingTypeWhisperFootprint || snapshot.processID == nil)
-            .help("Refresh TypeWhisper memory")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.035))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(tint.opacity(0.18), lineWidth: 0.5)
-        )
-    }
-
-    private var typeWhisperIconView: some View {
-        Image("typewhisper-icon", bundle: .appResources)
-            .resizable()
-            .interpolation(.high)
-            .antialiased(true)
-            .scaledToFit()
-            .padding(2)
-            .background(Color.black.opacity(0.32), in: Circle())
-            .overlay(
-                Circle()
-                    .stroke(.white.opacity(0.08), lineWidth: 0.5)
-            )
-    }
-
-    private func typeWhisperPill(_ title: String, tint: Color) -> some View {
-        Text(title)
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color.black.opacity(0.34), in: Capsule())
-    }
-
-    private func typeWhisperTint(_ snapshot: TypeWhisperSnapshot) -> Color {
-        if snapshot.apiServerEnabled {
-            return .orange.opacity(0.9)
-        }
-
-        switch snapshot.resolvedLoadState {
-        case .notRunning:
-            return .white.opacity(0.42)
-        case .unloaded:
-            return Color(red: 0.29, green: 0.86, blue: 0.46)
-        case .loaded:
-            return Color(red: 0.34, green: 0.61, blue: 0.99)
-        }
-    }
-
-    private func typeWhisperStatusTitle(_ snapshot: TypeWhisperSnapshot) -> String {
-        switch snapshot.resolvedLoadState {
-        case .notRunning:
-            return "Not running"
-        case .unloaded:
-            return "Model unloaded"
-        case .loaded:
-            let modelName = snapshot.effectiveModelName?.lowercased() ?? ""
-            let engine = snapshot.selectedEngine?.lowercased() ?? ""
-            if modelName.contains("qwen3") || engine == "qwen3" {
-                return "Qwen3 loaded"
-            }
-            return "Model loaded"
-        }
-    }
-
-    private func typeWhisperCompactModelLabel(_ snapshot: TypeWhisperSnapshot) -> String? {
-        switch snapshot.resolvedLoadState {
-        case .notRunning:
-            return nil
-        case .unloaded:
-            return snapshot.selectedModel?.nonEmpty
-        case .loaded:
-            var parts: [String] = []
-            if let model = snapshot.effectiveModelName {
-                parts.append(model)
-            }
-            if let memory = snapshot.memoryFootprintMegabytes {
-                parts.append(memoryLabel(memory))
-            }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
-        }
-    }
-
-    private func typeWhisperUnloadCountTitle(_ count: Int) -> String {
-        "\(count) today"
-    }
-
-    private func memoryLabel(_ megabytes: Double) -> String {
-        if megabytes >= 1_024 {
-            return String(format: "%.1fGB", megabytes / 1_024)
-        }
-        return "\(Int(megabytes.rounded()))MB"
     }
 
     private var actionableSessionID: String? {
@@ -2748,7 +2556,7 @@ private struct CentralActivityLabel: View {
         if lower.contains("web") || lower.contains("fetch") {
             return "globe"
         }
-        if lower.contains("typewhisper") || lower.contains("voice") || lower.contains("dictation") {
+        if lower.contains("voice") || lower.contains("dictation") {
             return "waveform"
         }
         if lower.contains("task") || lower.contains("agent") || lower.contains("subagent") {
