@@ -1,13 +1,13 @@
 ---
 name: open-island-workflow
-description: Use when working on this Open Island / open-vibe-island repository, especially tasks that mention Open Island, Vibe Island, Codex island suite, local dev app testing, repo workflow, branches, worktrees, commits, tags, or performance fixes. Enforces the user's current topic-branch or explicitly requested worktree workflow and repository verification expectations.
+description: Use when working on this Respect Island / open-vibe-island repository, especially tasks that mention Respect Island, Vibe Island, Codex island suite, local dev app testing, repo workflow, branches, worktrees, commits, tags, or performance fixes. Enforces the user's current topic-branch or explicitly requested worktree workflow and repository verification expectations.
 ---
 
-# Open Island Workflow
+# Respect Island Workflow
 
 ## Overview
 
-Follow the user's current local Open Island workflow. Create or switch to a topic branch in the current checkout by default; create a git worktree only when the user explicitly asks for one.
+Follow the user's current local Respect Island workflow. Create or switch to a topic branch in the current checkout by default; create a git worktree only when the user explicitly asks for one.
 
 ## Start
 
