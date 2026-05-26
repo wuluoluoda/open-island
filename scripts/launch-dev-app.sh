@@ -13,7 +13,7 @@ done
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 brand_script="$repo_root/scripts/generate_brand_icons.py"
 brand_icon="$repo_root/Assets/Brand/OpenIsland.icns"
-bundle_dir="$HOME/Applications/Open Island Dev.app"
+bundle_dir="$HOME/Applications/Respect Island Dev.app"
 plist_path="$bundle_dir/Contents/Info.plist"
 bundle_binary="$bundle_dir/Contents/MacOS/OpenIslandApp"
 
@@ -41,8 +41,8 @@ fi
 mkdir -p "$bundle_dir/Contents/MacOS" "$bundle_dir/Contents/Helpers" "$bundle_dir/Contents/Resources" "$bundle_dir/Contents/Frameworks"
 
 # Kill any running instance before copying so the binary isn't locked.
-osascript -e 'tell application "Open Island Dev" to quit' 2>/dev/null || true
-pkill -9 -f "Open Island Dev" 2>/dev/null || true
+osascript -e 'tell application "Respect Island Dev" to quit' 2>/dev/null || true
+pkill -9 -f "Respect Island Dev" 2>/dev/null || true
 sleep 2
 
 command cp "$app_binary" "$bundle_binary"
@@ -85,7 +85,7 @@ cat > "$plist_path" <<EOF
     <key>CFBundleIconFile</key>
     <string>OpenIsland</string>
     <key>CFBundleName</key>
-    <string>Open Island Dev</string>
+    <string>Respect Island Dev</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -95,7 +95,7 @@ cat > "$plist_path" <<EOF
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Open Island needs automation access to focus Terminal and iTerm sessions for jump-back.</string>
+    <string>Respect Island needs automation access to focus Terminal and iTerm sessions for jump-back.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>
@@ -134,8 +134,8 @@ fi
 # identity locally with zero Apple Developer Program involvement.
 sign_identity="-"
 if security find-identity -p codesigning -v "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null \
-       | grep -q '"Open Island Dev Local"'; then
-    sign_identity="Open Island Dev Local"
+       | grep -q '"Respect Island Dev Local"'; then
+    sign_identity="Respect Island Dev Local"
 else
     echo
     echo "⚠ Using ad-hoc signing. macOS TCC grants (Accessibility, Automation)"

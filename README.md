@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Assets/Brand/app-icon-cat.png" alt="Open Island" width="128" height="128">
+  <img src="Assets/Brand/app-icon-cat.png" alt="Respect Island" width="128" height="128">
 </p>
 
-<h1 align="center">Open Island</h1>
+<h1 align="center">Respect Island</h1>
 
 <p align="center">
   <strong>Why pay for a closed-source app just to monitor your coding agents?</strong>
@@ -26,14 +26,14 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/demo.gif" alt="Open Island in action" width="720">
+  <img src="docs/images/demo.gif" alt="Respect Island in action" width="720">
 </p>
 
 ---
 
 ## Project Lineage
 
-Open Island is based on [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island) and is distributed under the GNU General Public License v3.0. This repository is maintained as an independent GPLv3 project by [wuluoluoda](https://github.com/wuluoluoda), with emphasis on a Codex-heavy local workflow.
+Respect Island is based on [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island) and is distributed under the GNU General Public License v3.0. This repository is maintained as an independent GPLv3 project by [wuluoluoda](https://github.com/wuluoluoda), with emphasis on a Codex-heavy local workflow.
 
 ### What This Project Adds
 
@@ -44,15 +44,15 @@ Open Island is based on [Octane0411/open-vibe-island](https://github.com/Octane0
 
 Download the current DMG from [GitHub Releases](https://github.com/wuluoluoda/open-island/releases). Local builds may be unsigned, so macOS Gatekeeper can require right-clicking **Open** or removing quarantine after download.
 
-## What is Open Island?
+## What is Respect Island?
 
-Open Island sits in your Mac's **notch** (or top bar) and gives you a real-time control surface for your AI coding agents — session status, permission approvals, and instant jump-back to the right terminal. All without leaving your flow.
+Respect Island sits in your Mac's **notch** (or top bar) and gives you a real-time control surface for your AI coding agents — session status, permission approvals, and instant jump-back to the right terminal. All without leaving your flow.
 
 Think of it as an open-source [Vibe Island](https://vibeisland.app/) — **free, local-first, and you own every bit of it**.
 
 > *You don't need to pay for a product you can vibe, since you are a vibe coder.*
 
-## Why Open Island?
+## Why Respect Island?
 
 - **Open source** — GPL v3, modify it, audit it, ship your own version under the same license
 - **Local-first** — No server, no telemetry, no account. Everything runs on your Mac
@@ -134,7 +134,7 @@ cd open-island
 open Package.swift   # Opens in Xcode — hit Run
 ```
 
-On first launch, Open Island auto-discovers your active agent sessions and starts the live bridge. Hook installation is managed from the **Settings** window inside the app.
+On first launch, Respect Island auto-discovers your active agent sessions and starts the live bridge. Hook installation is managed from the **Settings** window inside the app.
 
 > **Requirements**: macOS 14+, Swift 6.2, Xcode
 
@@ -152,7 +152,7 @@ Notch overlay UI ← you see it here
 Jump back → correct terminal / IDE
 ```
 
-Hooks **fail open** — if Open Island isn't running, your agents continue unaffected.
+Hooks **fail open** — if Respect Island isn't running, your agents continue unaffected.
 
 <details>
 <summary>Architecture details</summary>
@@ -193,14 +193,14 @@ Copy this prompt into your agent (Claude Code, Codex, etc.) to auto-generate a w
 <summary>Click to expand</summary>
 
 ```
-I'm having an issue with Open Island (https://github.com/wuluoluoda/open-island).
+I'm having an issue with Respect Island (https://github.com/wuluoluoda/open-island).
 
 Please help me file a GitHub issue. Do the following:
 
 1. Collect my environment info:
    - Run `sw_vers` to get macOS version
    - Run `swift --version` to get Swift version
-   - Check if Open Island is running: `ps aux | grep -i "open.island\|OpenIslandApp" | grep -v grep`
+   - Check if Respect Island is running: `ps aux | grep -i "open.island\|OpenIslandApp" | grep -v grep`
    - Get the app version: `defaults read ~/Applications/Open\ Island\ Dev.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null || echo "unknown"`
    - Check which terminal I'm using
 
@@ -245,13 +245,13 @@ This section is written for agents.
 
 The open-source macOS companion for terminal-native AI coding.
 
-`Open Island` puts a lightweight control surface in your notch or top bar so you can keep an eye on live coding agents, follow session progress, and jump back to the right terminal without breaking flow.
+`Respect Island` puts a lightweight control surface in your notch or top bar so you can keep an eye on live coding agents, follow session progress, and jump back to the right terminal without breaking flow.
 
 ### Why This Product Exists
 
 AI coding is becoming part of the daily development loop, but the surrounding control layer still too often means handing your machine over to a closed-source paid app.
 
-`Open Island` takes the opposite approach:
+`Respect Island` takes the opposite approach:
 
 - Open source
 - Local first, no server dependency
@@ -264,8 +264,8 @@ Developers who already live in the terminal and want a better way to work with c
 
 ### Agent Integrations
 
-- **Codex CLI** — Hook-based integration. The managed installer installs `SessionStart`, `UserPromptSubmit`, and `Stop` by default to keep the terminal workflow low-noise. Open Island can parse richer Codex hook events such as `PreToolUse` and `PostToolUse` when configured manually, but those events are not part of the default managed installation. Codex file edits may use internal apply-patch paths, so file-edit approval should not be treated as guaranteed `PreToolUse` coverage. Reads 5-hour and 7-day account usage windows from local rollout files. Install/uninstall managed hooks from the Settings window or CLI.
-- **Codex Desktop App** — Detected via `__CFBundleIdentifier`; hook sessions tagged as `isCodexAppSession` so they follow desktop-app liveness (tied to `NSWorkspace.shared.runningApplications` rather than the CLI subprocess that exits after each turn). In addition to hooks, Open Island launches its own `codex app-server` subprocess and speaks JSON-RPC over stdio to receive live `thread/started`, `turn/started`, `turn/completed`, and `thread/closed` notifications. Clicking a session opens the exact conversation via the `codex://threads/<id>` URL scheme.
+- **Codex CLI** — Hook-based integration. The managed installer installs `SessionStart`, `UserPromptSubmit`, and `Stop` by default to keep the terminal workflow low-noise. Respect Island can parse richer Codex hook events such as `PreToolUse` and `PostToolUse` when configured manually, but those events are not part of the default managed installation. Codex file edits may use internal apply-patch paths, so file-edit approval should not be treated as guaranteed `PreToolUse` coverage. Reads 5-hour and 7-day account usage windows from local rollout files. Install/uninstall managed hooks from the Settings window or CLI.
+- **Codex Desktop App** — Detected via `__CFBundleIdentifier`; hook sessions tagged as `isCodexAppSession` so they follow desktop-app liveness (tied to `NSWorkspace.shared.runningApplications` rather than the CLI subprocess that exits after each turn). In addition to hooks, Respect Island launches its own `codex app-server` subprocess and speaks JSON-RPC over stdio to receive live `thread/started`, `turn/started`, `turn/completed`, and `thread/closed` notifications. Clicking a session opens the exact conversation via the `codex://threads/<id>` URL scheme.
 - **Claude Code** — Hook-based integration via `~/.claude/settings.json`. Discovers sessions from `~/.claude/projects/` JSONL transcripts. Persists and restores sessions across app launches. Managed status line bridge with opt-in installation. Reads cached 5-hour and 7-day usage windows.
 - **OpenCode** — JS plugin integration via `~/.config/opencode/plugins/`. Plugin auto-installed on first launch. Receives session lifecycle, tool use, permission, and question events. Permission approval and question answering flows supported. Process detection via `ps`.
 - **Qoder** — Claude Code fork. Same hook format and events via `~/.qoder/settings.json`. Use `--source qoder` with the hooks binary.
@@ -274,7 +274,7 @@ Developers who already live in the terminal and want a better way to work with c
 - **CodeBuddy** — Claude Code fork. Same hook format and events via `~/.codebuddy/settings.json`. Use `--source codebuddy` with the hooks binary.
 - **Cursor** — Hook-based integration via `~/.cursor/hooks.json`. Receives `beforeSubmitPrompt`, `beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile`, `afterFileEdit`, and `stop` events. Session persistence across app launches. Workspace jump-back via `cursor -r`. Use `--source cursor` with the hooks binary.
 - **Gemini CLI** — Hook-based integration via `~/.gemini/settings.json`. Receives `SessionStart`, `PreToolUse`, `PostToolUse`, `Stop`, and `UserPromptSubmit` events. Fire-and-forget (no block/deny). Use `--source gemini` with the hooks binary.
-- **Kimi CLI** — Hook-based integration via `~/.kimi/config.toml` `[[hooks]]` array (Moonshot AI). Kimi's hook payload is byte-compatible with Claude Code, so Open Island reuses the Claude decode path and adds a dedicated TOML installer. Subscribes to `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `PreToolUse`, and `PostToolUse`. Requires the Kimi CLI Hooks Beta. Use `--source kimi` with the hooks binary. Manage installation from the Settings window, or via CLI:
+- **Kimi CLI** — Hook-based integration via `~/.kimi/config.toml` `[[hooks]]` array (Moonshot AI). Kimi's hook payload is byte-compatible with Claude Code, so Respect Island reuses the Claude decode path and adds a dedicated TOML installer. Subscribes to `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `PreToolUse`, and `PostToolUse`. Requires the Kimi CLI Hooks Beta. Use `--source kimi` with the hooks binary. Manage installation from the Settings window, or via CLI:
 
   ```sh
   swift run OpenIslandSetup installKimi    # write [[hooks]] entries into ~/.kimi/config.toml
@@ -329,7 +329,7 @@ Build a local `.app` bundle:
 zsh scripts/package-app.sh
 ```
 
-That script creates `output/package/Open Island.app` and `output/package/Open Island.zip`. Pass `OPEN_ISLAND_SIGN_IDENTITY` to sign the bundle. See [docs/packaging.md](docs/packaging.md) for the full path, including notarization.
+That script creates `output/package/Respect Island.app` and `output/package/Respect Island.zip`. Pass `OPEN_ISLAND_SIGN_IDENTITY` to sign the bundle. See [docs/packaging.md](docs/packaging.md) for the full path, including notarization.
 
 #### Connect Codex
 

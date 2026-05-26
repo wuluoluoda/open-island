@@ -1,6 +1,6 @@
 # Release Signing & Notarization
 
-Open Island releases are code-signed and notarized via GitHub Actions. This document explains how to set up the required secrets.
+Respect Island releases are code-signed and notarized via GitHub Actions. This document explains how to set up the required secrets.
 
 ## Required GitHub Secrets
 

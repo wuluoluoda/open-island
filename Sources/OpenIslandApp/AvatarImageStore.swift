@@ -22,7 +22,7 @@ enum AvatarImageStore {
                 let limitMB = limitBytes / (1024 * 1024)
                 return "The selected file is too large. Choose an image under \(limitMB) MB."
             case .encodeFailed:
-                return "Open Island could not process that image."
+                return "Respect Island could not process that image."
             }
         }
     }
