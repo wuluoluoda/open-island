@@ -232,6 +232,19 @@ struct GeneralSettingsPane: View {
                     get: { model.suppressFrontmostNotifications },
                     set: { model.suppressFrontmostNotifications = $0 }
                 ))
+                Toggle(lang.t("settings.general.islandReminder"), isOn: Binding(
+                    get: { model.islandReminderEnabled },
+                    set: { model.islandReminderEnabled = $0 }
+                ))
+                Stepper(
+                    lang.t("settings.general.islandReminderRepeatCount", model.islandReminderRepeatCount),
+                    value: Binding(
+                        get: { model.islandReminderRepeatCount },
+                        set: { model.islandReminderRepeatCount = $0 }
+                    ),
+                    in: 1...12
+                )
+                .disabled(!model.islandReminderEnabled)
             }
 
         }

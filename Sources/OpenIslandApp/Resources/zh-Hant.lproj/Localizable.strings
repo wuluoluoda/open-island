@@ -27,6 +27,8 @@
 "settings.general.showDockIcon" = "在 Dock 中顯示圖示";
 "settings.general.hapticFeedback" = "懸停時震動回饋";
 "settings.general.suppressFrontmostNotifications" = "前台工作階段不彈出通知";
+"settings.general.islandReminder" = "主動展開靈動島提醒";
+"settings.general.islandReminderRepeatCount" = "額外提醒次數：%d";
 "settings.general.showCodexUsage" = "顯示 Codex 用量";
 "settings.general.completionReply" = "在完成卡片中回覆";
 "settings.general.cliHooks" = "CLI Hooks";

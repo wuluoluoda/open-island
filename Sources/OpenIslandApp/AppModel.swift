@@ -43,7 +43,10 @@ final class AppModel {
     private static let liveSessionStalenessWindow: TimeInterval = 15 * 60
     private static let jumpOverlayDismissLeadTime: Duration = .milliseconds(20)
     private static let islandReminderInterval: Duration = .seconds(5 * 60)
-    private static let islandReminderInactivityTimeout: TimeInterval = 15 * 60
+    private static let islandReminderDefaultRepeatCount = 3
+    private static let islandReminderRepeatCountRange = 1...12
+    private static let islandReminderEnabledDefaultsKey = "feature.islandReminder.enabled"
+    private static let islandReminderRepeatCountDefaultsKey = "feature.islandReminder.repeatCount"
 
     struct AcceptanceStep: Identifiable {
         let id: String
@@ -306,6 +309,27 @@ final class AppModel {
         didSet {
             guard hasFinishedInit, suppressFrontmostNotifications != oldValue else { return }
             UserDefaults.standard.set(suppressFrontmostNotifications, forKey: Self.suppressFrontmostNotificationsDefaultsKey)
+        }
+    }
+    var islandReminderEnabled: Bool = true {
+        didSet {
+            guard hasFinishedInit, islandReminderEnabled != oldValue else { return }
+            UserDefaults.standard.set(islandReminderEnabled, forKey: Self.islandReminderEnabledDefaultsKey)
+            if !islandReminderEnabled {
+                cancelIslandReminder()
+            }
+        }
+    }
+    var islandReminderRepeatCount: Int = 3 {
+        didSet {
+            let clamped = Self.clampedIslandReminderRepeatCount(islandReminderRepeatCount)
+            if clamped != islandReminderRepeatCount {
+                islandReminderRepeatCount = clamped
+                return
+            }
+
+            guard hasFinishedInit, islandReminderRepeatCount != oldValue else { return }
+            UserDefaults.standard.set(islandReminderRepeatCount, forKey: Self.islandReminderRepeatCountDefaultsKey)
         }
     }
     var codexStalledThresholdMinutes: Int = 12
@@ -652,13 +676,13 @@ final class AppModel {
     private var islandReminderTask: Task<Void, Never>?
 
     @ObservationIgnored
-    private var lastIslandReminderActivityAt: Date?
+    private var islandReminderFireCount = 0
 
     @ObservationIgnored
     var islandReminderIntervalOverride: Duration?
 
     @ObservationIgnored
-    var islandReminderInactivityTimeoutOverride: TimeInterval?
+    var islandReminderRepeatCountOverride: Int?
 
     @ObservationIgnored
     private var codexRolloutFallbackRefreshTask: Task<Void, Never>?
@@ -674,7 +698,8 @@ final class AppModel {
             await ForegroundTerminalSessionProbe().matches(session: session)
         },
         codexShelfFileActions: CodexShelfFileActioning = WorkspaceCodexShelfFileActions(),
-        codexShelfEnabledOverride: Bool? = nil
+        codexShelfEnabledOverride: Bool? = nil,
+        islandReminderEnabledOverride: Bool? = nil
     ) {
         self.terminalJumpAction = terminalJumpAction
         self.isNotificationSessionAlreadyFrontmost = isNotificationSessionAlreadyFrontmost
@@ -684,6 +709,8 @@ final class AppModel {
             Self.hapticFeedbackEnabledDefaultsKey: false,
             Self.completionReplyEnabledDefaultsKey: false,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
+            Self.islandReminderEnabledDefaultsKey: true,
+            Self.islandReminderRepeatCountDefaultsKey: Self.islandReminderDefaultRepeatCount,
             Self.codexRadarEnabledDefaultsKey: true,
             Self.energyProfileDefaultsKey: EnergyProfile.balanced.rawValue,
         ])
@@ -692,6 +719,10 @@ final class AppModel {
         showDockIcon = UserDefaults.standard.bool(forKey: Self.showDockIconDefaultsKey)
         hapticFeedbackEnabled = UserDefaults.standard.bool(forKey: Self.hapticFeedbackEnabledDefaultsKey)
         suppressFrontmostNotifications = UserDefaults.standard.bool(forKey: Self.suppressFrontmostNotificationsDefaultsKey)
+        islandReminderEnabled = islandReminderEnabledOverride ?? UserDefaults.standard.bool(forKey: Self.islandReminderEnabledDefaultsKey)
+        islandReminderRepeatCount = Self.clampedIslandReminderRepeatCount(
+            UserDefaults.standard.integer(forKey: Self.islandReminderRepeatCountDefaultsKey)
+        )
         if UserDefaults.standard.object(forKey: Self.showCodexUsageDefaultsKey) != nil {
             showCodexUsage = UserDefaults.standard.bool(forKey: Self.showCodexUsageDefaultsKey)
         } else {
@@ -1797,7 +1828,7 @@ final class AppModel {
                     stateChanged: true
                 )
             )
-            resetIslandReminderIfNeeded(for: event, referenceDate: Date())
+            resetIslandReminderIfNeeded(for: event)
         }
 
         // Push relevant events to the Watch/iPhone via the relay
@@ -2028,16 +2059,18 @@ final class AppModel {
         islandReminderIntervalOverride ?? Self.islandReminderInterval
     }
 
-    private var activeIslandReminderInactivityTimeout: TimeInterval {
-        islandReminderInactivityTimeoutOverride ?? Self.islandReminderInactivityTimeout
+    private var activeIslandReminderRepeatCount: Int {
+        islandReminderRepeatCountOverride ?? islandReminderRepeatCount
     }
 
-    private func resetIslandReminderIfNeeded(for event: AgentEvent, referenceDate: Date) {
-        guard Self.shouldResetIslandReminder(for: event) else {
+    private func resetIslandReminderIfNeeded(for event: AgentEvent) {
+        guard Self.shouldResetIslandReminder(for: event),
+              islandReminderEnabled,
+              activeIslandReminderRepeatCount > 0 else {
             return
         }
 
-        lastIslandReminderActivityAt = referenceDate
+        islandReminderFireCount = 0
         guard islandReminderTask == nil else {
             return
         }
@@ -2054,23 +2087,35 @@ final class AppModel {
                     return
                 }
 
-                guard self.islandReminderIsStillActive(referenceDate: Date()) else {
+                guard self.islandReminderCanFire else {
                     self.islandReminderTask = nil
                     return
                 }
 
+                self.islandReminderFireCount += 1
                 self.playIslandReminderSound()
                 self.notchOpen(reason: .click)
+
+                if self.islandReminderFireCount >= self.activeIslandReminderRepeatCount {
+                    self.islandReminderTask = nil
+                    return
+                }
             }
         }
     }
 
-    private func islandReminderIsStillActive(referenceDate: Date) -> Bool {
-        guard let lastIslandReminderActivityAt else {
-            return false
-        }
+    private var islandReminderCanFire: Bool {
+        islandReminderEnabled && islandReminderFireCount < activeIslandReminderRepeatCount
+    }
 
-        return referenceDate.timeIntervalSince(lastIslandReminderActivityAt) < activeIslandReminderInactivityTimeout
+    private func cancelIslandReminder() {
+        islandReminderTask?.cancel()
+        islandReminderTask = nil
+        islandReminderFireCount = 0
+    }
+
+    private static func clampedIslandReminderRepeatCount(_ value: Int) -> Int {
+        min(max(value, islandReminderRepeatCountRange.lowerBound), islandReminderRepeatCountRange.upperBound)
     }
 
     nonisolated private static func shouldResetIslandReminder(for event: AgentEvent) -> Bool {
