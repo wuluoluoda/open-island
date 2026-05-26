@@ -205,8 +205,8 @@ struct IslandPanelView: View {
         }
     }
 
-    /// Scout icon tint: blue if any running, green if any live, else gray.
-    private var scoutTint: Color {
+    /// Brand glyph tint: blue if any running, green if any live, else gray.
+    private var brandTint: Color {
         if model.isCustomAppearance, let phase = closedSpotlightSession?.phase {
             return model.statusColor(for: phase)
         }
@@ -426,14 +426,14 @@ struct IslandPanelView: View {
                     HStack(spacing: 4) {
                         if model.isCustomAppearance {
                             IslandPixelGlyph(
-                                tint: scoutTint,
+                                tint: brandTint,
                                 style: model.islandPixelShapeStyle,
                                 isAnimating: hasClosedActivity,
                                 customAvatarImage: model.customAvatarImage
                             )
                             .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         } else {
-                            OpenIslandIcon(size: 14, isAnimating: hasClosedActivity, tint: scoutTint)
+                            OpenIslandIcon(size: 14, isAnimating: hasClosedActivity, tint: brandTint)
                                 .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         }
 
@@ -468,7 +468,7 @@ struct IslandPanelView: View {
                     let attentionBalanceWidth: CGFloat = closedSpotlightNeedsAction ? 18 : 0
                     ClosedTextBadge(
                         title: closedBadgeText,
-                        tint: closedSpotlightNeedsAction ? .orange : scoutTint
+                        tint: closedSpotlightNeedsAction ? .orange : brandTint
                     )
                     .matchedGeometryEffect(id: "right-indicator", in: notchNamespace, isSource: true)
                     .frame(width: max(sideWidth, countBadgeWidth) + attentionBalanceWidth)

@@ -1,12 +1,12 @@
 # Brand Assets
 
-This directory contains the current `Scout` mascot icon assets for macOS app packaging and internal product surfaces.
+This directory contains the current `Signal Fold` icon assets for macOS app packaging and internal product surfaces.
 
 Structure:
 
 - `Source/` keeps raw brand source assets that should not be treated as generated runtime output.
 - `AppIcon.appiconset/`, `OpenIsland.iconset/`, and `OpenIsland.icns` are generated packaging assets.
-- `Internal/` contains small derived assets for in-app surfaces.
+- `Internal/` contains small derived assets for in-app surfaces. Some filenames retain the old `scout` prefix for compatibility with existing packaging scripts.
 
 Generation workflow:
 
@@ -20,7 +20,7 @@ Generation workflow:
 
 Current raw source assets:
 
-- `Source/logo.png`: original 1280x1280 logo source image
+- `Source/logo.png`: selected Signal Fold app icon source image
 
 macOS app icon sizes included:
 
@@ -43,5 +43,5 @@ Why both formats exist:
 Current design direction:
 
 - shell: black glass face with a cool metallic rim
-- mark: white `Scout` mascot with the three-square punctuation column from the chosen icon reference
-- internal surfaces: simplified mascot-only versions without punctuation when space is tight
+- mark: folded signal planes with cyan-blue edge lighting and a small beacon dot
+- internal surfaces: simplified fold-only glyphs when space is tight
