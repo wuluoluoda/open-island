@@ -44,10 +44,9 @@ APP_ICON_SPECS = [
     ("icon_512x512@2x.png", "512x512", "2x", 1024),
 ]
 
-# Apple's macOS icon grid (Big Sur+): the art occupies an 824×824 region
-# centered in a 1024×1024 canvas, leaving a transparent safe zone so our
-# squircle visually matches stock macOS icons in Finder/Launchpad/Dock.
-MACOS_ICON_CONTENT_RATIO = 824 / 1024
+# Keep a small transparent safe zone while letting the rounded icon shell feel
+# like one coherent object instead of a black square floating inside the tile.
+MACOS_ICON_CONTENT_RATIO = 0.90
 
 
 def main() -> None:
@@ -142,6 +141,58 @@ def draw_glow_ellipse(base: Image.Image, box: tuple[int, int, int, int], color: 
 
 def paste_masked(base: Image.Image, overlay: Image.Image, xy: tuple[int, int], mask: Image.Image) -> None:
     base.paste(overlay, xy, mask)
+
+
+def source_icon_shell(src: Image.Image) -> Image.Image:
+    """Extract the designed rounded shell from a generated square preview.
+
+    Image generation tends to return a black full-canvas background around the
+    actual rounded icon. If we resize that whole canvas into the macOS icon
+    safe zone, Finder/Dock shows a hard black square. This crops to the visible
+    shell, applies a single rounded alpha mask, and leaves real transparency
+    outside the icon silhouette.
+    """
+    src = src.convert("RGBA")
+    if src.width != src.height:
+        side = min(src.width, src.height)
+        left = (src.width - side) // 2
+        top = (src.height - side) // 2
+        src = src.crop((left, top, left + side, top + side))
+
+    rgb = src.convert("RGB")
+    mask = Image.new("L", src.size, 0)
+    mask_pixels = mask.load()
+    pixels = rgb.load()
+    for y in range(src.height):
+        for x in range(src.width):
+            r, g, b = pixels[x, y]
+            if max(r, g, b) > 18:
+                mask_pixels[x, y] = 255
+
+    bbox = mask.getbbox()
+    if bbox is None:
+        return src
+
+    left, top, right, bottom = bbox
+    pad = max(12, round(src.width * 0.025))
+    left = max(0, left - pad)
+    top = max(0, top - pad)
+    right = min(src.width, right + pad)
+    bottom = min(src.height, bottom + pad)
+
+    width = right - left
+    height = bottom - top
+    side = max(width, height)
+    center_x = (left + right) // 2
+    center_y = (top + bottom) // 2
+    left = max(0, min(src.width - side, center_x - side // 2))
+    top = max(0, min(src.height - side, center_y - side // 2))
+    crop = src.crop((left, top, left + side, top + side))
+
+    shell = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    shell_mask = rounded_mask((side, side), round(side * 0.255))
+    shell.paste(crop, (0, 0), shell_mask)
+    return shell
 
 
 def draw_app_shell(size: int) -> tuple[Image.Image, tuple[int, int, int, int]]:
@@ -306,7 +357,7 @@ def render_badge(size: int) -> Image.Image:
 def write_app_icons() -> None:
     cat_icon_path = BRAND_ROOT / "app-icon-cat.png"
     if cat_icon_path.exists():
-        src = Image.open(cat_icon_path).convert("RGBA")
+        src = source_icon_shell(Image.open(cat_icon_path))
         for filename, _, _, pixel_size in APP_ICON_SPECS:
             canvas = Image.new("RGBA", (pixel_size, pixel_size), (0, 0, 0, 0))
             content_size = max(1, round(pixel_size * MACOS_ICON_CONTENT_RATIO))
