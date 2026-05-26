@@ -205,8 +205,8 @@ struct IslandPanelView: View {
         }
     }
 
-    /// Scout icon tint: blue if any running, green if any live, else gray.
-    private var scoutTint: Color {
+    /// Brand glyph tint: blue if any running, green if any live, else gray.
+    private var brandTint: Color {
         if model.isCustomAppearance, let phase = closedSpotlightSession?.phase {
             return model.statusColor(for: phase)
         }
@@ -370,6 +370,24 @@ struct IslandPanelView: View {
                     surfaceShape
                         .stroke(Color.white.opacity(hidesClosedSurfaceChrome ? 0 : (usesOpenedVisualState ? 0.07 : 0.04)), lineWidth: 1)
                 }
+                .overlay {
+                    if !hidesClosedSurfaceChrome && !usesOpenedVisualState && hasClosedPresence {
+                        surfaceShape
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        brandTint.opacity(0.78),
+                                        Color(red: 0.52, green: 0.42, blue: 1.0).opacity(0.32),
+                                        brandTint.opacity(0.18),
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1
+                            )
+                            .shadow(color: brandTint.opacity(hasClosedActivity ? 0.45 : 0.22), radius: 6, x: 0, y: 0)
+                    }
+                }
                 .overlay(alignment: .top) {
                     Capsule()
                         .fill(Color.black)
@@ -423,17 +441,17 @@ struct IslandPanelView: View {
         } else {
             HStack(spacing: 0) {
                 if hasClosedPresence {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         if model.isCustomAppearance {
                             IslandPixelGlyph(
-                                tint: scoutTint,
+                                tint: brandTint,
                                 style: model.islandPixelShapeStyle,
                                 isAnimating: hasClosedActivity,
                                 customAvatarImage: model.customAvatarImage
                             )
                             .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         } else {
-                            OpenIslandIcon(size: 14, isAnimating: hasClosedActivity, tint: scoutTint)
+                            OpenIslandIcon(size: 15, isAnimating: hasClosedActivity, tint: brandTint)
                                 .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         }
 
@@ -468,7 +486,7 @@ struct IslandPanelView: View {
                     let attentionBalanceWidth: CGFloat = closedSpotlightNeedsAction ? 18 : 0
                     ClosedTextBadge(
                         title: closedBadgeText,
-                        tint: closedSpotlightNeedsAction ? .orange : scoutTint
+                        tint: closedSpotlightNeedsAction ? .orange : brandTint
                     )
                     .matchedGeometryEffect(id: "right-indicator", in: notchNamespace, isSource: true)
                     .frame(width: max(sideWidth, countBadgeWidth) + attentionBalanceWidth)
@@ -2414,7 +2432,7 @@ private struct IslandWideButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Open Island icon (left side of closed notch)
+// MARK: - Respect Island icon (left side of closed notch)
 
 private struct OpenIslandIcon: View {
     let size: CGFloat
@@ -2456,7 +2474,23 @@ private struct ClosedTextBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Color(red: 0.14, green: 0.14, blue: 0.15), in: Capsule())
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.10),
+                        tint.opacity(0.16),
+                        Color.black.opacity(0.36),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: Capsule()
+            )
+            .overlay {
+                Capsule()
+                    .stroke(tint.opacity(0.42), lineWidth: 1)
+            }
+            .shadow(color: tint.opacity(0.28), radius: 3, x: 0, y: 0)
     }
 }
 

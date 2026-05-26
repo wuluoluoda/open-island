@@ -18,7 +18,7 @@ INTERNAL_COLOR_DIR = BRAND_ROOT / "Internal" / "color"
 INTERNAL_TEMPLATE_DIR = BRAND_ROOT / "Internal" / "template"
 INTERNAL_BADGE_DIR = BRAND_ROOT / "Internal" / "badge"
 ICNS_PATH = BRAND_ROOT / "OpenIsland.icns"
-SVG_MASTER_PATH = BRAND_ROOT / "scout-app-icon-master.svg"
+SVG_MASTER_PATH = BRAND_ROOT / "signal-fold-app-icon-master.svg"
 
 SCOUT_PATTERN = [
     "..B..B..",
@@ -44,10 +44,9 @@ APP_ICON_SPECS = [
     ("icon_512x512@2x.png", "512x512", "2x", 1024),
 ]
 
-# Apple's macOS icon grid (Big Sur+): the art occupies an 824×824 region
-# centered in a 1024×1024 canvas, leaving a transparent safe zone so our
-# squircle visually matches stock macOS icons in Finder/Launchpad/Dock.
-MACOS_ICON_CONTENT_RATIO = 824 / 1024
+# Keep a small transparent safe zone while letting the rounded icon shell feel
+# like one coherent object instead of a black square floating inside the tile.
+MACOS_ICON_CONTENT_RATIO = 0.90
 
 
 def main() -> None:
@@ -144,6 +143,58 @@ def paste_masked(base: Image.Image, overlay: Image.Image, xy: tuple[int, int], m
     base.paste(overlay, xy, mask)
 
 
+def source_icon_shell(src: Image.Image) -> Image.Image:
+    """Extract the designed rounded shell from a generated square preview.
+
+    Image generation tends to return a black full-canvas background around the
+    actual rounded icon. If we resize that whole canvas into the macOS icon
+    safe zone, Finder/Dock shows a hard black square. This crops to the visible
+    shell, applies a single rounded alpha mask, and leaves real transparency
+    outside the icon silhouette.
+    """
+    src = src.convert("RGBA")
+    if src.width != src.height:
+        side = min(src.width, src.height)
+        left = (src.width - side) // 2
+        top = (src.height - side) // 2
+        src = src.crop((left, top, left + side, top + side))
+
+    rgb = src.convert("RGB")
+    mask = Image.new("L", src.size, 0)
+    mask_pixels = mask.load()
+    pixels = rgb.load()
+    for y in range(src.height):
+        for x in range(src.width):
+            r, g, b = pixels[x, y]
+            if max(r, g, b) > 18:
+                mask_pixels[x, y] = 255
+
+    bbox = mask.getbbox()
+    if bbox is None:
+        return src
+
+    left, top, right, bottom = bbox
+    pad = max(12, round(src.width * 0.025))
+    left = max(0, left - pad)
+    top = max(0, top - pad)
+    right = min(src.width, right + pad)
+    bottom = min(src.height, bottom + pad)
+
+    width = right - left
+    height = bottom - top
+    side = max(width, height)
+    center_x = (left + right) // 2
+    center_y = (top + bottom) // 2
+    left = max(0, min(src.width - side, center_x - side // 2))
+    top = max(0, min(src.height - side, center_y - side // 2))
+    crop = src.crop((left, top, left + side, top + side))
+
+    shell = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    shell_mask = rounded_mask((side, side), round(side * 0.255))
+    shell.paste(crop, (0, 0), shell_mask)
+    return shell
+
+
 def draw_app_shell(size: int) -> tuple[Image.Image, tuple[int, int, int, int]]:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
 
@@ -228,43 +279,58 @@ def render_app_icon(size: int) -> Image.Image:
     return image
 
 
+def draw_signal_fold_mark(
+    draw: ImageDraw.ImageDraw,
+    size: int,
+    *,
+    fill: tuple[int, int, int, int],
+    edge: tuple[int, int, int, int],
+    include_dot: bool,
+) -> None:
+    def point(x: float, y: float) -> tuple[int, int]:
+        return (round(size * x), round(size * y))
+
+    panes = [
+        [point(0.10, 0.62), point(0.45, 0.41), point(0.54, 0.57), point(0.17, 0.81)],
+        [point(0.42, 0.16), point(0.70, 0.34), point(0.70, 0.82), point(0.42, 0.64)],
+        [point(0.28, 0.36), point(0.55, 0.53), point(0.48, 0.68), point(0.28, 0.55)],
+        [point(0.67, 0.49), point(0.89, 0.38), point(0.89, 0.64), point(0.67, 0.80)],
+    ]
+
+    edge_width = max(1, round(size * 0.055))
+    for pane in panes:
+        draw.polygon(pane, fill=fill)
+        draw.line(pane + [pane[0]], fill=edge, width=edge_width, joint="curve")
+
+    if include_dot:
+        radius = max(1, round(size * 0.075))
+        cx, cy = point(0.50, 0.84)
+        draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=edge)
+
+
 def render_color_mark(size: int) -> Image.Image:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    cell = size / 8
-    palette = {
-        "B": rgba("#6E9FFF"),
-        "H": rgba("#96BCFF"),
-        "E": rgba("#112548"),
-        "P": rgba("#6E9FFF"),
-    }
-    origin = (0, 0)
-    for row_index, row in enumerate(SCOUT_PATTERN):
-        for column_index, char in enumerate(row):
-            if char == ".":
-                continue
-            x = round(origin[0] + column_index * cell)
-            y = round(origin[1] + row_index * cell)
-            x2 = round(origin[0] + (column_index + 1) * cell)
-            y2 = round(origin[1] + (row_index + 1) * cell)
-            draw.rectangle((x, y, x2 - 1, y2 - 1), fill=palette[char])
+    draw_signal_fold_mark(
+        draw,
+        size,
+        fill=rgba("#182035", 220),
+        edge=rgba("#6EB7FF"),
+        include_dot=size >= 32,
+    )
     return image
 
 
 def render_template_mark(size: int) -> Image.Image:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    cell = size / 8
-    fill = rgba("#000000")
-    for row_index, row in enumerate(SCOUT_PATTERN):
-        for column_index, char in enumerate(row):
-            if char == ".":
-                continue
-            x = round(column_index * cell)
-            y = round(row_index * cell)
-            x2 = round((column_index + 1) * cell)
-            y2 = round((row_index + 1) * cell)
-            draw.rectangle((x, y, x2 - 1, y2 - 1), fill=fill)
+    draw_signal_fold_mark(
+        draw,
+        size,
+        fill=rgba("#000000", 150),
+        edge=rgba("#000000"),
+        include_dot=False,
+    )
     return image
 
 
@@ -281,7 +347,7 @@ def render_badge(size: int) -> Image.Image:
     face_mask = rounded_mask((face_size, face_size), max(5, int(size * 0.19)))
     paste_masked(image, face_gradient, (inset, inset), face_mask)
 
-    mark = render_color_mark(int(face_size * 0.64)).resize((int(face_size * 0.64), int(face_size * 0.64)), Image.Resampling.NEAREST)
+    mark = render_color_mark(int(face_size * 0.72)).resize((int(face_size * 0.72), int(face_size * 0.72)), Image.Resampling.LANCZOS)
     mx = inset + (face_size - mark.width) // 2
     my = inset + (face_size - mark.height) // 2
     image.alpha_composite(mark, (mx, my))
@@ -291,7 +357,7 @@ def render_badge(size: int) -> Image.Image:
 def write_app_icons() -> None:
     cat_icon_path = BRAND_ROOT / "app-icon-cat.png"
     if cat_icon_path.exists():
-        src = Image.open(cat_icon_path).convert("RGBA")
+        src = source_icon_shell(Image.open(cat_icon_path))
         for filename, _, _, pixel_size in APP_ICON_SPECS:
             canvas = Image.new("RGBA", (pixel_size, pixel_size), (0, 0, 0, 0))
             content_size = max(1, round(pixel_size * MACOS_ICON_CONTENT_RATIO))
@@ -349,44 +415,37 @@ def build_icns() -> None:
 
 
 def write_svg_master(path: Path) -> None:
-    pixel_rects = []
-    palette = {
-        "B": "#264653",
-        "H": "#E9F5F2",
-        "E": "#1A1C20",
-    }
-
-    cell = 58
-    mark_width = 8 * cell
-    mark_height = 8 * cell
-    origin_x = (1024 - mark_width) // 2 - 24  # centered within face area
-    origin_y = (1024 - mark_height) // 2 - 12
-    for row_index, row in enumerate(SCOUT_PATTERN):
-        for column_index, char in enumerate(row):
-            if char == ".":
-                continue
-            pixel_rects.append(
-                f'<rect x="{origin_x + column_index * cell}" y="{origin_y + row_index * cell}" width="{cell}" height="{cell}" fill="{palette[char]}"/>'
-            )
-
     svg = f"""<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="face" x1="140" y1="128" x2="884" y2="872" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B8F0A8"/>
-      <stop offset="0.5" stop-color="#88E0C0"/>
-      <stop offset="1" stop-color="#78CCE8"/>
+    <linearGradient id="face" x1="120" y1="96" x2="904" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202833"/>
+      <stop offset="1" stop-color="#05070A"/>
     </linearGradient>
-    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="white" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    <linearGradient id="pane" x1="270" y1="150" x2="760" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39404C"/>
+      <stop offset="0.52" stop-color="#10182A"/>
+      <stop offset="1" stop-color="#253B67"/>
     </linearGradient>
+    <filter id="glow" x="120" y="90" width="790" height="850" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
   <g>
-    <rect x="140" y="128" width="744" height="744" rx="178" fill="url(#face)"/>
-    <rect x="140" y="128" width="744" height="348" rx="178" fill="url(#gloss)"/>
+    <rect x="112" y="92" width="800" height="840" rx="196" fill="url(#face)"/>
+    <rect x="112" y="92" width="800" height="840" rx="196" stroke="#79B7FF" stroke-opacity="0.64" stroke-width="12"/>
+  </g>
+  <g filter="url(#glow)" opacity="0.62">
+    <path d="M102 635L461 420L553 584L174 830Z" stroke="#6EB7FF" stroke-width="42"/>
+    <path d="M430 164L717 348V842L430 657Z" stroke="#6EB7FF" stroke-width="44"/>
+    <path d="M286 369L563 543L492 698L286 563Z" stroke="#6EB7FF" stroke-width="38"/>
+    <path d="M686 502L912 389V655L686 819Z" stroke="#6EB7FF" stroke-width="38"/>
   </g>
   <g>
-    {"".join(pixel_rects)}
+    <path d="M102 635L461 420L553 584L174 830Z" fill="url(#pane)" stroke="#6EB7FF" stroke-width="30" stroke-linejoin="round"/>
+    <path d="M430 164L717 348V842L430 657Z" fill="url(#pane)" stroke="#9ACBFF" stroke-width="34" stroke-linejoin="round"/>
+    <path d="M286 369L563 543L492 698L286 563Z" fill="url(#pane)" stroke="#7E8CFF" stroke-width="28" stroke-linejoin="round"/>
+    <path d="M686 502L912 389V655L686 819Z" fill="url(#pane)" stroke="#7E8CFF" stroke-width="28" stroke-linejoin="round"/>
+    <circle cx="512" cy="860" r="54" fill="#76D5FF" stroke="#9ACBFF" stroke-width="18"/>
   </g>
 </svg>
 """

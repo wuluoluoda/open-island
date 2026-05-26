@@ -258,9 +258,9 @@ public struct SessionState: Equatable, Sendable {
             session.lastTurnInterrupted = false
             switch session.tool {
             case .claudeCode, .geminiCLI, .qoder, .qwenCode, .factory, .codebuddy, .kimiCLI:
-                session.summary = "Permission denied in Open Island."
+                session.summary = "Permission denied in Respect Island."
             case .openCode:
-                session.summary = "Permission denied in Open Island."
+                session.summary = "Permission denied in Respect Island."
             default:
                 session.summary = "Permission denied. Review the session in the terminal."
             }

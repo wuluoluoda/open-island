@@ -2,7 +2,7 @@
 
 ## Problem
 
-`Open Island Dev` can show high long-running energy impact in Activity Monitor even when the island is mostly idle. The core island experience is display, notification, and jump-back; background work that does not directly support those paths should be quiet by default.
+`Respect Island Dev` can show high long-running energy impact in Activity Monitor even when the island is mostly idle. The core island experience is display, notification, and jump-back; background work that does not directly support those paths should be quiet by default.
 
 ## Intended End State
 
@@ -139,7 +139,7 @@ Avoid scheduling every persistence store after every event:
 - Unit test rollout fallback gating for healthy and disconnected real-time channels.
 - Unit test tool-scoped persistence scheduling and no-op event short-circuiting.
 - Run `swift test`.
-- Refresh `Open Island Dev.app` with `zsh scripts/launch-dev-app.sh`.
+- Refresh `Respect Island Dev.app` with `zsh scripts/launch-dev-app.sh`.
 - Confirm the running dev app was refreshed from the intended commit.
 - Manually observe Activity Monitor after several idle minutes; the 12 hour energy column is cumulative, so prefer current "Energy Impact" trend after the new process has been running.
 

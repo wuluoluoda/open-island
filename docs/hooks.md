@@ -77,7 +77,7 @@ The `CodexHookPayload` model and `BridgeServer` can parse richer events (`PreToo
 The app can block a command by writing this to stdout:
 
 ```json
-{"decision": "block", "reason": "Blocked by Open Island"}
+{"decision": "block", "reason": "Blocked by Respect Island"}
 ```
 
 All other events require no stdout response.

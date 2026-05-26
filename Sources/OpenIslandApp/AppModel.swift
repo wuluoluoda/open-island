@@ -1416,7 +1416,7 @@ final class AppModel {
             // the `CommandGroup(.appSettings)` button that opens the window.
             NSApp.sendAction(NSSelectorFromString("showSettingsWindow:"), to: nil, from: nil)
         }
-        if let window = NSApp.windows.first(where: { $0.title == "Open Island Settings" }) {
+        if let window = NSApp.windows.first(where: { $0.title == "Respect Island Settings" }) {
             window.orderFrontRegardless()
             window.makeKey()
         }
@@ -1638,7 +1638,7 @@ final class AppModel {
 
         switch action {
         case .deny:
-            resolution = .deny(message: "Permission denied in Open Island.", interrupt: false)
+            resolution = .deny(message: "Permission denied in Respect Island.", interrupt: false)
             message = "Denying permission for \(session.title)."
         case .allowOnce:
             resolution = .allowOnce()
@@ -1740,7 +1740,7 @@ final class AppModel {
             return .allowOnce()
         }
 
-        return .deny(message: "Permission denied in Open Island.", interrupt: false)
+        return .deny(message: "Permission denied in Respect Island.", interrupt: false)
     }
 
     func applyTrackedEvent(
