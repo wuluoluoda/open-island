@@ -42,6 +42,8 @@ final class AppModel {
     private static let syntheticClaudeSessionPrefix = "claude-process:"
     private static let liveSessionStalenessWindow: TimeInterval = 15 * 60
     private static let jumpOverlayDismissLeadTime: Duration = .milliseconds(20)
+    private static let islandReminderInterval: Duration = .seconds(5 * 60)
+    private static let islandReminderInactivityTimeout: TimeInterval = 15 * 60
 
     struct AcceptanceStep: Identifiable {
         let id: String
@@ -645,6 +647,18 @@ final class AppModel {
 
     @ObservationIgnored
     private var notificationPresentationTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var islandReminderTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var lastIslandReminderActivityAt: Date?
+
+    @ObservationIgnored
+    var islandReminderIntervalOverride: Duration?
+
+    @ObservationIgnored
+    var islandReminderInactivityTimeoutOverride: TimeInterval?
 
     @ObservationIgnored
     private var codexRolloutFallbackRefreshTask: Task<Void, Never>?
@@ -1780,6 +1794,7 @@ final class AppModel {
                     stateChanged: true
                 )
             )
+            resetIslandReminderIfNeeded(for: event, referenceDate: Date())
         }
 
         // Push relevant events to the Watch/iPhone via the relay
@@ -2003,6 +2018,70 @@ final class AppModel {
             }
 
             self.presentNotificationSurface(surface, playSound: false)
+        }
+    }
+
+    private var activeIslandReminderInterval: Duration {
+        islandReminderIntervalOverride ?? Self.islandReminderInterval
+    }
+
+    private var activeIslandReminderInactivityTimeout: TimeInterval {
+        islandReminderInactivityTimeoutOverride ?? Self.islandReminderInactivityTimeout
+    }
+
+    private func resetIslandReminderIfNeeded(for event: AgentEvent, referenceDate: Date) {
+        guard Self.shouldResetIslandReminder(for: event) else {
+            return
+        }
+
+        lastIslandReminderActivityAt = referenceDate
+        guard islandReminderTask == nil else {
+            return
+        }
+
+        islandReminderTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: self.activeIslandReminderInterval)
+                } catch {
+                    return
+                }
+
+                guard self.islandReminderIsStillActive(referenceDate: Date()) else {
+                    self.islandReminderTask = nil
+                    return
+                }
+
+                self.playNotificationSound()
+                self.notchPop()
+            }
+        }
+    }
+
+    private func islandReminderIsStillActive(referenceDate: Date) -> Bool {
+        guard let lastIslandReminderActivityAt else {
+            return false
+        }
+
+        return referenceDate.timeIntervalSince(lastIslandReminderActivityAt) < activeIslandReminderInactivityTimeout
+    }
+
+    nonisolated private static func shouldResetIslandReminder(for event: AgentEvent) -> Bool {
+        switch event {
+        case .sessionStarted, .activityUpdated, .permissionRequested, .questionAsked, .sessionCompleted:
+            return true
+        case .jumpTargetUpdated,
+             .sessionMetadataUpdated,
+             .claudeSessionMetadataUpdated,
+             .geminiSessionMetadataUpdated,
+             .openCodeSessionMetadataUpdated,
+             .cursorSessionMetadataUpdated,
+             .actionableStateResolved:
+            return false
         }
     }
 
