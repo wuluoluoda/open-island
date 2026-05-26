@@ -1,9 +1,9 @@
 ---
 name: open-island-dev-worktree-cleanup
-description: Use when working in this Open Island repository and the user explicitly asks to create or use a git worktree from local dev instead of the normal in-checkout topic branch, or asks to merge/integrate/clean up that dev-based worktree. Ensures the worktree is removed after the work is integrated.
+description: Use when working in this Respect Island repository and the user explicitly asks to create or use a git worktree from local dev instead of the normal in-checkout topic branch, or asks to merge/integrate/clean up that dev-based worktree. Ensures the worktree is removed after the work is integrated.
 ---
 
-# Open Island Dev Worktree Cleanup
+# Respect Island Dev Worktree Cleanup
 
 ## Scope
 

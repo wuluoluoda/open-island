@@ -1,13 +1,13 @@
 ---
 name: open-island-agent-reuse
-description: Use when implementing, reviewing, or planning Open Island features for a specific agent or runtime surface such as Codex, Claude Code, Gemini CLI, Cursor, OpenCode, Kimi CLI, Qoder, Qwen Code, Factory, or CodeBuddy. Keep the immediate agent-specific change working while lightly checking whether session, event, hook, installer, usage, jump-back, or UI patterns should be reusable by other agents.
+description: Use when implementing, reviewing, or planning Respect Island features for a specific agent or runtime surface such as Codex, Claude Code, Gemini CLI, Cursor, OpenCode, Kimi CLI, Qoder, Qwen Code, Factory, or CodeBuddy. Keep the immediate agent-specific change working while lightly checking whether session, event, hook, installer, usage, jump-back, or UI patterns should be reusable by other agents.
 ---
 
-# Open Island Agent Reuse
+# Respect Island Agent Reuse
 
 ## Overview
 
-Keep Open Island multi-agent without turning every agent-specific feature into a broad refactor. Prefer small reusable seams when they are natural, and keep source-specific behavior explicit when a protocol or product surface truly needs it.
+Keep Respect Island multi-agent without turning every agent-specific feature into a broad refactor. Prefer small reusable seams when they are natural, and keep source-specific behavior explicit when a protocol or product surface truly needs it.
 
 ## Reuse Check
 
