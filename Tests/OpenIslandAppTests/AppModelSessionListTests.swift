@@ -843,7 +843,7 @@ struct AppModelSessionListTests {
     }
 
     @Test
-    func islandReminderPopsAfterRecentTaskActivity() async throws {
+    func islandReminderOpensSessionListAfterRecentTaskActivity() async throws {
         let now = Date(timeIntervalSince1970: 2_000)
         var playedNotificationSoundCount = 0
         var playedReminderSoundCount = 0
@@ -876,7 +876,7 @@ struct AppModelSessionListTests {
         )
 
         for _ in 0..<20 {
-            if playedReminderSoundCount >= 1, model.notchStatus == .popping {
+            if playedReminderSoundCount >= 1, model.notchStatus == .opened {
                 break
             }
             await Task.yield()
@@ -885,7 +885,8 @@ struct AppModelSessionListTests {
 
         #expect(playedNotificationSoundCount == 0)
         #expect(playedReminderSoundCount >= 1)
-        #expect(model.notchStatus == .popping)
+        #expect(model.notchStatus == .opened)
+        #expect(model.notchOpenReason == .click)
         #expect(model.islandSurface == .sessionList())
     }
 

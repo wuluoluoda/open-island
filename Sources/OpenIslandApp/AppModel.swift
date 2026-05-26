@@ -2060,7 +2060,7 @@ final class AppModel {
                 }
 
                 self.playIslandReminderSound()
-                self.notchPop()
+                self.notchOpen(reason: .click)
             }
         }
     }
