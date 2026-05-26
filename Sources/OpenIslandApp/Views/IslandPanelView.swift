@@ -1633,14 +1633,11 @@ private struct IslandSessionRow: View {
             guard isInteractive else { return }
             isHighlighted = hovering
         }
-        .overlay {
+        .contextMenu {
             if isInteractive {
-                IslandSessionRowContextMenuBridge(
-                    title: lang.t("island.card.delete"),
-                    onDelete: onDelete,
-                    isEnabled: isInteractive
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Button(role: .destructive, action: onDelete) {
+                    Label(lang.t("island.card.delete"), systemImage: "trash")
+                }
             }
         }
         .onChange(of: isInteractive) { _, interactive in
@@ -2052,71 +2049,6 @@ private struct IslandSessionRow: View {
         case .ready:
             presence == .inactive ? .white.opacity(0.46) : statusTint(for: presence)
         }
-    }
-}
-
-private struct IslandSessionRowContextMenuBridge: NSViewRepresentable {
-    let title: String
-    let onDelete: () -> Void
-    let isEnabled: Bool
-
-    func makeNSView(context: Context) -> IslandSessionRowContextMenuView {
-        let view = IslandSessionRowContextMenuView()
-        view.title = title
-        view.onDelete = onDelete
-        view.isEnabled = isEnabled
-        return view
-    }
-
-    func updateNSView(_ nsView: IslandSessionRowContextMenuView, context: Context) {
-        nsView.title = title
-        nsView.onDelete = onDelete
-        nsView.isEnabled = isEnabled
-    }
-}
-
-private final class IslandSessionRowContextMenuView: NSView {
-    var isEnabled: Bool = false
-    var title: String = ""
-    var onDelete: (() -> Void)?
-    private let actionTarget = IslandSessionRowContextMenuActionTarget()
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        guard isEnabled else { return nil }
-        guard let event = NSApp.currentEvent,
-              event.type == .rightMouseDown || event.type == .rightMouseUp,
-              bounds.contains(point)
-        else {
-            return nil
-        }
-        return self
-    }
-
-    override func rightMouseDown(with event: NSEvent) {
-        guard isEnabled else {
-            super.rightMouseDown(with: event)
-            return
-        }
-
-        let menu = NSMenu(title: "")
-        let deleteItem = NSMenuItem(
-            title: title,
-            action: #selector(IslandSessionRowContextMenuActionTarget.performDeleteAction),
-            keyEquivalent: ""
-        )
-        deleteItem.target = actionTarget
-        deleteItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
-        menu.addItem(deleteItem)
-        actionTarget.action = onDelete
-        NSMenu.popUpContextMenu(menu, with: event, for: self)
-    }
-}
-
-private final class IslandSessionRowContextMenuActionTarget: NSObject {
-    var action: (() -> Void)?
-
-    @objc func performDeleteAction() {
-        action?()
     }
 }
 

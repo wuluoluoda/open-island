@@ -695,8 +695,18 @@ final class NotchHostingView<Content: View>: NSHostingView<Content> {
         // With nonactivatingPanel, hover-opened panels aren't key, so
         // SwiftUI Button may consume the first click for key acquisition
         // instead of firing its action.
-        window?.makeKey()
+        prepareForMouseActivation()
         super.mouseDown(with: event)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        // Keep context menu interactions working in nonactivating panels.
+        prepareForMouseActivation()
+        super.rightMouseDown(with: event)
+    }
+
+    private func prepareForMouseActivation() {
+        window?.makeKey()
     }
 
     required init(rootView: Content) {
