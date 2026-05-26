@@ -1503,6 +1503,12 @@ private struct IslandSessionRow: View {
                                 compactBadge(terminalBadge, presence: presence)
                             }
                             compactBadge(session.spotlightAgeBadge, presence: presence)
+                            if isInteractive {
+                                CardDeleteButton(
+                                    title: lang.t("island.card.delete"),
+                                    action: onDelete
+                                )
+                            }
                             if let onDismiss {
                                 DismissButton(action: onDismiss)
                             }
@@ -1632,16 +1638,6 @@ private struct IslandSessionRow: View {
         .onHover { hovering in
             guard isInteractive else { return }
             isHighlighted = hovering
-        }
-        .overlay {
-            if isInteractive {
-                IslandSessionRowContextMenuBridge(
-                    title: lang.t("island.card.delete"),
-                    onDelete: onDelete,
-                    isEnabled: isInteractive
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
         }
         .onChange(of: isInteractive) { _, interactive in
             if !interactive {
@@ -2052,71 +2048,6 @@ private struct IslandSessionRow: View {
         case .ready:
             presence == .inactive ? .white.opacity(0.46) : statusTint(for: presence)
         }
-    }
-}
-
-private struct IslandSessionRowContextMenuBridge: NSViewRepresentable {
-    let title: String
-    let onDelete: () -> Void
-    let isEnabled: Bool
-
-    func makeNSView(context: Context) -> IslandSessionRowContextMenuView {
-        let view = IslandSessionRowContextMenuView()
-        view.title = title
-        view.onDelete = onDelete
-        view.isEnabled = isEnabled
-        return view
-    }
-
-    func updateNSView(_ nsView: IslandSessionRowContextMenuView, context: Context) {
-        nsView.title = title
-        nsView.onDelete = onDelete
-        nsView.isEnabled = isEnabled
-    }
-}
-
-private final class IslandSessionRowContextMenuView: NSView {
-    var isEnabled: Bool = false
-    var title: String = ""
-    var onDelete: (() -> Void)?
-    private let actionTarget = IslandSessionRowContextMenuActionTarget()
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        guard isEnabled else { return nil }
-        guard let event = NSApp.currentEvent,
-              event.type == .rightMouseDown || event.type == .rightMouseUp,
-              bounds.contains(point)
-        else {
-            return nil
-        }
-        return self
-    }
-
-    override func rightMouseDown(with event: NSEvent) {
-        guard isEnabled else {
-            super.rightMouseDown(with: event)
-            return
-        }
-
-        let menu = NSMenu(title: "")
-        let deleteItem = NSMenuItem(
-            title: title,
-            action: #selector(IslandSessionRowContextMenuActionTarget.performDeleteAction),
-            keyEquivalent: ""
-        )
-        deleteItem.target = actionTarget
-        deleteItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
-        menu.addItem(deleteItem)
-        actionTarget.action = onDelete
-        NSMenu.popUpContextMenu(menu, with: event, for: self)
-    }
-}
-
-private final class IslandSessionRowContextMenuActionTarget: NSObject {
-    var action: (() -> Void)?
-
-    @objc func performDeleteAction() {
-        action?()
     }
 }
 
@@ -2780,6 +2711,26 @@ private struct DismissButton: View {
                 .foregroundStyle(.white.opacity(isHovered ? 0.8 : 0.4))
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+private struct CardDeleteButton: View {
+    let title: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "trash")
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(isHovered ? 0.78 : 0.36))
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .help(title)
         .onHover { isHovered = $0 }
     }
 }
