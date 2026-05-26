@@ -43,5 +43,5 @@ Why both formats exist:
 Current design direction:
 
 - shell: black glass face with a cool metallic rim
-- mark: folded signal planes with cyan-blue edge lighting and a small beacon dot
+- mark: folded signal planes with cyan-blue edge lighting, a small beacon dot, and `RESPECT` split across the four panes as `RE` / `SP` / `EC` / `T`
 - internal surfaces: simplified fold-only glyphs when space is tight
