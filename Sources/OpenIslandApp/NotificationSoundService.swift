@@ -6,6 +6,7 @@ struct NotificationSoundService {
     private static let soundsDirectory = "/System/Library/Sounds"
     private static let defaultsKey = "notification.sound.name"
     static let defaultSoundName = "Bottle"
+    static let islandReminderSoundName = "Ping"
     private static var activeSound: NSSound?
 
     /// Returns the list of available system sound names (without file extension).
@@ -46,5 +47,13 @@ struct NotificationSoundService {
             return
         }
         play(selectedSoundName)
+    }
+
+    /// Plays the fixed island reminder sound, respecting the mute setting.
+    static func playIslandReminder(isMuted: Bool) {
+        guard !isMuted else {
+            return
+        }
+        play(islandReminderSoundName)
     }
 }

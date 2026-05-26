@@ -1377,6 +1377,9 @@ final class AppModel {
     private func playNotificationSound() {
         overlay.playNotificationSound()
     }
+    private func playIslandReminderSound() {
+        overlay.playIslandReminderSound()
+    }
     private func presentNotificationSurface(_ surface: IslandSurface, playSound: Bool = true) {
         overlay.presentNotificationSurface(surface, playSound: playSound)
         prewarmJumpTargets(for: surface.sessionID)
@@ -2056,7 +2059,7 @@ final class AppModel {
                     return
                 }
 
-                self.playNotificationSound()
+                self.playIslandReminderSound()
                 self.notchPop()
             }
         }
