@@ -847,9 +847,9 @@ struct AppModelSessionListTests {
         let now = Date(timeIntervalSince1970: 2_000)
         var playedNotificationSoundCount = 0
         var playedReminderSoundCount = 0
-        let model = AppModel()
+        let model = AppModel(islandReminderEnabledOverride: true)
         model.islandReminderIntervalOverride = .milliseconds(20)
-        model.islandReminderInactivityTimeoutOverride = 0.2
+        model.islandReminderRepeatCountOverride = 3
         model.overlay.notificationSoundPlayer = { _ in
             playedNotificationSoundCount += 1
         }
@@ -891,12 +891,12 @@ struct AppModelSessionListTests {
     }
 
     @Test
-    func islandReminderStopsAfterInactivityWindow() async throws {
+    func islandReminderStopsAfterConfiguredRepeatCount() async throws {
         let now = Date(timeIntervalSince1970: 2_000)
         var playedReminderSoundCount = 0
-        let model = AppModel()
+        let model = AppModel(islandReminderEnabledOverride: true)
         model.islandReminderIntervalOverride = .milliseconds(20)
-        model.islandReminderInactivityTimeoutOverride = 0.055
+        model.islandReminderRepeatCountOverride = 2
         model.overlay.islandReminderSoundPlayer = { _ in
             playedReminderSoundCount += 1
         }
@@ -921,8 +921,42 @@ struct AppModelSessionListTests {
 
         try await Task.sleep(for: .milliseconds(130))
 
-        #expect(playedReminderSoundCount >= 1)
-        #expect(playedReminderSoundCount <= 2)
+        #expect(playedReminderSoundCount == 2)
+    }
+
+    @Test
+    func islandReminderCanBeDisabled() async throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var playedReminderSoundCount = 0
+        let model = AppModel(islandReminderEnabledOverride: false)
+        model.islandReminderIntervalOverride = .milliseconds(20)
+        model.islandReminderRepeatCountOverride = 3
+        model.overlay.islandReminderSoundPlayer = { _ in
+            playedReminderSoundCount += 1
+        }
+        model.notchStatus = .closed
+        model.notchOpenReason = nil
+
+        model.applyTrackedEvent(
+            .sessionStarted(
+                SessionStarted(
+                    sessionID: "disabled-reminder-session",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    initialPhase: .running,
+                    summary: "Working.",
+                    timestamp: now
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .bridge
+        )
+
+        try await Task.sleep(for: .milliseconds(80))
+
+        #expect(playedReminderSoundCount == 0)
+        #expect(model.notchStatus == .closed)
     }
 
     @Test
