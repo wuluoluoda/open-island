@@ -843,6 +843,83 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func islandReminderPopsAfterRecentTaskActivity() async throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var playedSoundCount = 0
+        let model = AppModel()
+        model.islandReminderIntervalOverride = .milliseconds(20)
+        model.islandReminderInactivityTimeoutOverride = 0.2
+        model.overlay.notificationSoundPlayer = { _ in
+            playedSoundCount += 1
+        }
+        model.notchStatus = .closed
+        model.notchOpenReason = nil
+
+        model.applyTrackedEvent(
+            .sessionStarted(
+                SessionStarted(
+                    sessionID: "active-codex-session",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    initialPhase: .running,
+                    summary: "Working.",
+                    timestamp: now
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .bridge
+        )
+
+        for _ in 0..<20 {
+            if playedSoundCount >= 1, model.notchStatus == .popping {
+                break
+            }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(playedSoundCount >= 1)
+        #expect(model.notchStatus == .popping)
+        #expect(model.islandSurface == .sessionList())
+    }
+
+    @Test
+    func islandReminderStopsAfterInactivityWindow() async throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        var playedSoundCount = 0
+        let model = AppModel()
+        model.islandReminderIntervalOverride = .milliseconds(20)
+        model.islandReminderInactivityTimeoutOverride = 0.055
+        model.overlay.notificationSoundPlayer = { _ in
+            playedSoundCount += 1
+        }
+        model.notchStatus = .closed
+        model.notchOpenReason = nil
+
+        model.applyTrackedEvent(
+            .sessionStarted(
+                SessionStarted(
+                    sessionID: "quiet-codex-session",
+                    title: "Codex · open-island",
+                    tool: .codex,
+                    origin: .live,
+                    initialPhase: .running,
+                    summary: "Working.",
+                    timestamp: now
+                )
+            ),
+            updateLastActionMessage: false,
+            ingress: .bridge
+        )
+
+        try await Task.sleep(for: .milliseconds(130))
+
+        #expect(playedSoundCount >= 1)
+        #expect(playedSoundCount <= 2)
+    }
+
+    @Test
     func completionNotificationPresentsEvenWhenSessionListIsOpen() {
         let now = Date(timeIntervalSince1970: 2_000)
         var playedSoundCount = 0
