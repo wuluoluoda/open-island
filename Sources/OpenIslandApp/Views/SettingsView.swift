@@ -220,10 +220,18 @@ struct GeneralSettingsPane: View {
                     get: { model.showDockIcon },
                     set: { model.showDockIcon = $0 }
                 ))
-                Toggle(lang.t("settings.general.typeWhisperStatus"), isOn: Binding(
+                Toggle(isOn: Binding(
                     get: { model.typeWhisperStatusEnabled },
                     set: { model.typeWhisperStatusEnabled = $0 }
-                ))
+                )) {
+                    HStack {
+                        Text(lang.t("settings.general.typeWhisperStatus"))
+                        Image(systemName: "questionmark.circle")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .help(lang.t("settings.general.typeWhisperStatus.help"))
+                    }
+                }
                 Toggle(lang.t("settings.general.hapticFeedback"), isOn: Binding(
                     get: { model.hapticFeedbackEnabled },
                     set: { model.hapticFeedbackEnabled = $0 }

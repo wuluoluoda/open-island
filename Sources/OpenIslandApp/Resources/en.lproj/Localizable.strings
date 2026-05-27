@@ -26,6 +26,7 @@
 "settings.general.autoCollapse" = "Auto-collapse on mouse exit";
 "settings.general.showDockIcon" = "Show icon in Dock";
 "settings.general.typeWhisperStatus" = "Show TypeWhisper status";
+"settings.general.typeWhisperStatus.help" = "Currently only supports qwen3-asr-1.7b-6bit. More model support will be added later.";
 "settings.general.typeWhisper.section" = "TypeWhisper";
 "settings.general.typeWhisper.status" = "Status";
 "settings.general.typeWhisper.engine" = "Engine";

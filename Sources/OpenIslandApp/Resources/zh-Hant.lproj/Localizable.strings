@@ -26,6 +26,7 @@
 "settings.general.autoCollapse" = "滑鼠離開時自動收起";
 "settings.general.showDockIcon" = "在 Dock 中顯示圖示";
 "settings.general.typeWhisperStatus" = "顯示 TypeWhisper 狀態";
+"settings.general.typeWhisperStatus.help" = "目前僅支援 qwen3-asr-1.7b-6bit，後續會持續拓展更多模型。";
 "settings.general.typeWhisper.section" = "TypeWhisper";
 "settings.general.typeWhisper.status" = "狀態";
 "settings.general.typeWhisper.engine" = "引擎";
