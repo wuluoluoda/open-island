@@ -236,10 +236,48 @@ final class HookInstallationCoordinator {
         if let sevenDay = snapshot.sevenDay {
             components.append("7d \(sevenDay.roundedUsedPercentage)%")
         }
+        if let fiveHourTokens = snapshot.tokenUsage?.fiveHour {
+            components.append("5h \(Self.usageAmountText(for: fiveHourTokens))")
+        }
+        if let sevenDayTokens = snapshot.tokenUsage?.sevenDay {
+            components.append("7d \(Self.usageAmountText(for: sevenDayTokens))")
+        }
+        if let latestModel = snapshot.tokenUsage?.latestModel {
+            components.append(latestModel)
+        }
         if let cachedAt = snapshot.cachedAt {
             components.append("updated \(relativeTimestampFormatter.localizedString(for: cachedAt, relativeTo: .now))")
         }
         return components.isEmpty ? nil : components.joined(separator: " · ")
+    }
+
+    private static func usageAmountText(for window: ClaudeTokenUsageWindow) -> String {
+        if let cost = window.estimatedCostCNY {
+            return estimatedCostText(cost)
+        }
+        return "\(compactTokenCount(window.totalTokens)) tok"
+    }
+
+    private static func estimatedCostText(_ value: Double) -> String {
+        if value < 0.01 {
+            return String(format: "¥%.4f", value)
+        }
+        if value < 1 {
+            return String(format: "¥%.2f", value)
+        }
+        return String(format: "¥%.1f", value)
+    }
+
+    private static func compactTokenCount(_ value: Int) -> String {
+        if value >= 1_000_000 {
+            let millions = Double(value) / 1_000_000
+            return String(format: millions >= 10 ? "%.0fM" : "%.1fM", millions)
+        }
+        if value >= 1_000 {
+            let thousands = Double(value) / 1_000
+            return String(format: thousands >= 10 ? "%.0fK" : "%.1fK", thousands)
+        }
+        return "\(value)"
     }
 
     var codexUsageStatusTitle: String {

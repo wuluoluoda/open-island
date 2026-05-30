@@ -4,6 +4,65 @@ import Testing
 
 struct ClaudeUsageTests {
     @Test
+    func claudeUsageLoaderAggregatesTranscriptTokenWindowsAndDeduplicatesMessageIDs() throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("open-island-claude-token-usage-\(UUID().uuidString)", isDirectory: true)
+        let projectURL = rootURL.appendingPathComponent("projects/repo", isDirectory: true)
+        let transcriptURL = projectURL.appendingPathComponent("session.jsonl")
+        let now = ISO8601DateFormatter().date(from: "2026-05-30T14:30:00Z")!
+
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
+        let transcript = """
+        {"type":"assistant","timestamp":"2026-05-30T14:00:00.000Z","message":{"id":"m-recent","model":"deepseek-v4-flash","usage":{"input_tokens":100,"cache_creation_input_tokens":10,"cache_read_input_tokens":1000,"output_tokens":50}}}
+        {"type":"assistant","timestamp":"2026-05-30T14:00:00.100Z","message":{"id":"m-recent","model":"deepseek-v4-flash","usage":{"input_tokens":100,"cache_creation_input_tokens":10,"cache_read_input_tokens":1000,"output_tokens":50}}}
+        {"type":"assistant","timestamp":"2026-05-30T10:00:00.000Z","message":{"id":"m-five-hour","model":"deepseek-v4-flash","usage":{"input_tokens":20,"cache_read_input_tokens":30,"output_tokens":5}}}
+        {"type":"assistant","timestamp":"2026-05-28T10:00:00.000Z","message":{"id":"m-seven-day","model":"claude-sonnet-4-5","usage":{"input_tokens":7,"output_tokens":8}}}
+        {"type":"assistant","timestamp":"2026-05-20T10:00:00.000Z","message":{"id":"m-old","usage":{"input_tokens":999,"output_tokens":999}}}
+        """
+        try transcript.write(to: transcriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: transcriptURL.path)
+
+        let snapshot = try ClaudeUsageLoader.loadTokenUsage(fromRootURL: rootURL, now: now)
+
+        #expect(snapshot?.fiveHour?.totalTokens == 1_215)
+        #expect(snapshot?.sevenDay?.totalTokens == 1_230)
+        #expect(abs((snapshot?.fiveHour?.estimatedCostCNY ?? 0) - 0.0002606) < 0.00000001)
+        #expect(abs((snapshot?.sevenDay?.estimatedCostCNY ?? 0) - 0.0002606) < 0.00000001)
+        #expect(snapshot?.latestModel == "deepseek-v4-flash")
+        #expect(snapshot?.sourceFileCount == 1)
+    }
+
+    @Test
+    func claudeUsageLoaderCombinesRateLimitCacheWithTranscriptTokens() throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("open-island-claude-combined-usage-\(UUID().uuidString)", isDirectory: true)
+        let cacheURL = rootURL.appendingPathComponent("open-island-rl.json")
+        let projectURL = rootURL.appendingPathComponent("projects/repo", isDirectory: true)
+        let transcriptURL = projectURL.appendingPathComponent("session.jsonl")
+
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
+        try """
+        {"five_hour":{"used_percentage":25}}
+        """.write(to: cacheURL, atomically: true, encoding: .utf8)
+        try """
+        {"type":"assistant","timestamp":"2026-05-30T14:00:00.000Z","message":{"id":"m1","model":"deepseek-v4-flash","usage":{"input_tokens":100,"output_tokens":50}}}
+        """.write(to: transcriptURL, atomically: true, encoding: .utf8)
+
+        let snapshot = try ClaudeUsageLoader.load(from: [cacheURL], transcriptRootURL: rootURL)
+
+        #expect(snapshot?.fiveHour?.roundedUsedPercentage == 25)
+        #expect(snapshot?.tokenUsage?.sevenDay?.totalTokens == 150)
+    }
+
+    @Test
     func claudeUsageLoaderParsesCachedRateLimits() throws {
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("open-island-claude-usage-\(UUID().uuidString)", isDirectory: true)

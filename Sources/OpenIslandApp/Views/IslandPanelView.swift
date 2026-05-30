@@ -1303,6 +1303,30 @@ struct IslandPanelView: View {
                 )
             }
 
+            if let fiveHourTokens = snapshot.tokenUsage?.fiveHour {
+                windows.append(
+                    UsageWindowPresentation(
+                        id: "claude-token-5h",
+                        label: "5h",
+                        usedPercentage: 0,
+                        resetsAt: nil,
+                        valueText: Self.usageAmountText(for: fiveHourTokens)
+                    )
+                )
+            }
+
+            if let sevenDayTokens = snapshot.tokenUsage?.sevenDay {
+                windows.append(
+                    UsageWindowPresentation(
+                        id: "claude-token-7d",
+                        label: "7d",
+                        usedPercentage: 0,
+                        resetsAt: nil,
+                        valueText: Self.usageAmountText(for: sevenDayTokens)
+                    )
+                )
+            }
+
             if windows.isEmpty == false {
                 providers.append(
                     UsageProviderPresentation(
@@ -1472,9 +1496,9 @@ struct IslandPanelView: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
 
-            Text("\(window.roundedUsedPercentage)%")
+            Text(window.valueText ?? "\(window.roundedUsedPercentage)%")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(usageColor(for: window.usedPercentage))
+                .foregroundStyle(window.valueText == nil ? usageColor(for: window.usedPercentage) : .white.opacity(0.82))
 
             if layout.showsResetTime,
                let resetsAt = window.resetsAt,
@@ -1490,6 +1514,35 @@ struct IslandPanelView: View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.white.opacity(opacity))
+    }
+
+    private static func usageAmountText(for window: ClaudeTokenUsageWindow) -> String {
+        if let cost = window.estimatedCostCNY {
+            return estimatedCostText(cost)
+        }
+        return "\(compactTokenCount(window.totalTokens)) tok"
+    }
+
+    private static func estimatedCostText(_ value: Double) -> String {
+        if value < 0.01 {
+            return String(format: "¥%.4f", value)
+        }
+        if value < 1 {
+            return String(format: "¥%.2f", value)
+        }
+        return String(format: "¥%.1f", value)
+    }
+
+    private static func compactTokenCount(_ value: Int) -> String {
+        if value >= 1_000_000 {
+            let millions = Double(value) / 1_000_000
+            return String(format: millions >= 10 ? "%.0fM" : "%.1fM", millions)
+        }
+        if value >= 1_000 {
+            let thousands = Double(value) / 1_000
+            return String(format: thousands >= 10 ? "%.0fK" : "%.1fK", thousands)
+        }
+        return "\(value)"
     }
 
     private func headerPill(_ title: String, tint: Color) -> some View {
@@ -1558,6 +1611,7 @@ private struct UsageWindowPresentation: Identifiable {
     let label: String
     let usedPercentage: Double
     let resetsAt: Date?
+    var valueText: String? = nil
 
     var roundedUsedPercentage: Int {
         Int(usedPercentage.rounded())
