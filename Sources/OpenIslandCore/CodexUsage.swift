@@ -108,18 +108,36 @@ public enum CodexUsageLoader {
             return lhs.modifiedAt > rhs.modifiedAt
         }
 
-        return sortedCandidates
+        let snapshots = sortedCandidates
             .compactMap { candidate in
                 loadLatestSnapshot(from: candidate.fileURL, modifiedAt: candidate.modifiedAt)
             }
+
+        guard let newestSnapshot = snapshots.max(by: isOlderUsageSnapshot) else {
+            return nil
+        }
+
+        let freshnessCutoff = newestSnapshot.sortDate.addingTimeInterval(-Self.accountLimitFreshnessWindow)
+        return snapshots
+            .filter { $0.sortDate >= freshnessCutoff }
             .max { lhs, rhs in
-                if lhs.sortDate == rhs.sortDate {
-                    return lhs.sourceFilePath.localizedStandardCompare(rhs.sourceFilePath) == .orderedAscending
+                if lhs.isAccountLimit != rhs.isAccountLimit {
+                    return !lhs.isAccountLimit && rhs.isAccountLimit
                 }
 
-                return lhs.sortDate < rhs.sortDate
+                return isOlderUsageSnapshot(lhs, rhs)
             }
     }
+
+    private static func isOlderUsageSnapshot(_ lhs: CodexUsageSnapshot, _ rhs: CodexUsageSnapshot) -> Bool {
+        if lhs.sortDate == rhs.sortDate {
+            return lhs.sourceFilePath.localizedStandardCompare(rhs.sourceFilePath) == .orderedAscending
+        }
+
+        return lhs.sortDate < rhs.sortDate
+    }
+
+    private static let accountLimitFreshnessWindow: TimeInterval = 24 * 60 * 60
 
     private static func loadLatestSnapshot(from fileURL: URL, modifiedAt: Date) -> CodexUsageSnapshot? {
         guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
@@ -291,6 +309,10 @@ public enum CodexUsageLoader {
 }
 
 private extension CodexUsageSnapshot {
+    var isAccountLimit: Bool {
+        limitID == "codex"
+    }
+
     var sortDate: Date {
         capturedAt ?? .distantPast
     }

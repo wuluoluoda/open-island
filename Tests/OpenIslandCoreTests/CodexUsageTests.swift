@@ -217,6 +217,76 @@ struct CodexUsageTests {
     }
 
     @Test
+    func codexUsageLoaderPrefersRecentAccountLimitOverNewerModelLimit() throws {
+        let rootURL = temporaryRootURL(named: "codex-usage-account-limit")
+        let accountRolloutURL = rootURL
+            .appendingPathComponent("2026/04/03", isDirectory: true)
+            .appendingPathComponent("rollout-account-limit.jsonl")
+        let modelRolloutURL = rootURL
+            .appendingPathComponent("2026/04/03", isDirectory: true)
+            .appendingPathComponent("rollout-model-limit.jsonl")
+
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try writeRollout(
+            [
+                rolloutLine(
+                    timestamp: "2026-04-03T01:50:35.000Z",
+                    type: "event_msg",
+                    payload: [
+                        "type": "token_count",
+                        "rate_limits": [
+                            "limit_id": "codex",
+                            "plan_type": "prolite",
+                            "primary": [
+                                "used_percent": 27.0,
+                                "window_minutes": 300,
+                            ],
+                            "secondary": [
+                                "used_percent": 96.0,
+                                "window_minutes": 10_080,
+                            ],
+                        ],
+                    ]
+                ),
+            ],
+            to: accountRolloutURL
+        )
+        try writeRollout(
+            [
+                rolloutLine(
+                    timestamp: "2026-04-03T02:05:35.000Z",
+                    type: "event_msg",
+                    payload: [
+                        "type": "token_count",
+                        "rate_limits": [
+                            "limit_id": "codex_bengalfox",
+                            "limit_name": "GPT-5.3-Codex-Spark",
+                            "primary": [
+                                "used_percent": 0.0,
+                                "window_minutes": 300,
+                            ],
+                            "secondary": [
+                                "used_percent": 13.0,
+                                "window_minutes": 10_080,
+                            ],
+                        ],
+                    ]
+                ),
+            ],
+            to: modelRolloutURL
+        )
+
+        let snapshot = try CodexUsageLoader.load(fromRootURL: rootURL)
+
+        #expect(resolvedPath(snapshot?.sourceFilePath) == accountRolloutURL.resolvingSymlinksInPath().path)
+        #expect(snapshot?.limitID == "codex")
+        #expect(snapshot?.windows.map(\.leftPercentage) == [73, 4])
+    }
+
+    @Test
     func codexUsageLoaderFormatsNonStandardWindowLengths() throws {
         let rootURL = temporaryRootURL(named: "codex-usage-labels")
         let rolloutURL = rootURL
