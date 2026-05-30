@@ -147,3 +147,13 @@ fi
 codesign --force --deep --sign "$sign_identity" "$bundle_dir" 2>/dev/null || true
 
 open -na "$bundle_dir"
+
+for attempt in {1..20}; do
+    if pgrep -f "$bundle_binary" >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 0.25
+done
+
+echo "Respect Island Dev.app did not stay running after launch." >&2
+exit 1
