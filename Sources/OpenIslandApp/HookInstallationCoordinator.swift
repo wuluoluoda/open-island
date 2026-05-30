@@ -302,7 +302,7 @@ final class HookInstallationCoordinator {
         }
 
         var components = snapshot.windows.map { window in
-            "\(window.label) \(window.roundedUsedPercentage)%"
+            "\(window.label) \(Int(window.leftPercentage.rounded()))% left"
         }
 
         if let planType = snapshot.planType {

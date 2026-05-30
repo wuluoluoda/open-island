@@ -148,6 +148,75 @@ struct CodexUsageTests {
     }
 
     @Test
+    func codexUsageLoaderPrefersNewestTokenCountTimestampAcrossRollouts() throws {
+        let rootURL = temporaryRootURL(named: "codex-usage-global-latest")
+        let staleTouchedRolloutURL = rootURL
+            .appendingPathComponent("2026/04/03", isDirectory: true)
+            .appendingPathComponent("rollout-stale-touched.jsonl")
+        let latestRolloutURL = rootURL
+            .appendingPathComponent("2026/04/03", isDirectory: true)
+            .appendingPathComponent("rollout-latest-token-count.jsonl")
+
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        try writeRollout(
+            [
+                rolloutLine(
+                    timestamp: "2026-04-03T01:50:35.000Z",
+                    type: "event_msg",
+                    payload: [
+                        "type": "token_count",
+                        "rate_limits": [
+                            "primary": [
+                                "used_percent": 9.0,
+                                "window_minutes": 300,
+                            ],
+                            "secondary": [
+                                "used_percent": 19.0,
+                                "window_minutes": 10_080,
+                            ],
+                        ],
+                    ]
+                ),
+            ],
+            to: staleTouchedRolloutURL
+        )
+        try writeRollout(
+            [
+                rolloutLine(
+                    timestamp: "2026-04-03T01:55:35.000Z",
+                    type: "event_msg",
+                    payload: [
+                        "type": "token_count",
+                        "rate_limits": [
+                            "primary": [
+                                "used_percent": 14.0,
+                                "window_minutes": 300,
+                            ],
+                            "secondary": [
+                                "used_percent": 28.0,
+                                "window_minutes": 10_080,
+                            ],
+                        ],
+                    ]
+                ),
+            ],
+            to: latestRolloutURL
+        )
+
+        try setModificationDate(Date(timeIntervalSince1970: 3_000), for: staleTouchedRolloutURL)
+        try setModificationDate(Date(timeIntervalSince1970: 2_000), for: latestRolloutURL)
+
+        let snapshot = try CodexUsageLoader.load(fromRootURL: rootURL)
+
+        #expect(resolvedPath(snapshot?.sourceFilePath) == latestRolloutURL.resolvingSymlinksInPath().path)
+        #expect(snapshot?.windows.map(\.roundedUsedPercentage) == [14, 28])
+        #expect(snapshot?.capturedAt == isoDate("2026-04-03T01:55:35.000Z"))
+    }
+
+    @Test
     func codexUsageLoaderFormatsNonStandardWindowLengths() throws {
         let rootURL = temporaryRootURL(named: "codex-usage-labels")
         let rolloutURL = rootURL

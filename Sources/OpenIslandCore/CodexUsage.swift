@@ -108,16 +108,17 @@ public enum CodexUsageLoader {
             return lhs.modifiedAt > rhs.modifiedAt
         }
 
-        for candidate in sortedCandidates {
-            if let snapshot = loadLatestSnapshot(
-                from: candidate.fileURL,
-                modifiedAt: candidate.modifiedAt
-            ) {
-                return snapshot
+        return sortedCandidates
+            .compactMap { candidate in
+                loadLatestSnapshot(from: candidate.fileURL, modifiedAt: candidate.modifiedAt)
             }
-        }
+            .max { lhs, rhs in
+                if lhs.sortDate == rhs.sortDate {
+                    return lhs.sourceFilePath.localizedStandardCompare(rhs.sourceFilePath) == .orderedAscending
+                }
 
-        return nil
+                return lhs.sortDate < rhs.sortDate
+            }
     }
 
     private static func loadLatestSnapshot(from fileURL: URL, modifiedAt: Date) -> CodexUsageSnapshot? {
@@ -232,6 +233,11 @@ public enum CodexUsageLoader {
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) {
+            return date
+        }
+
+        formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: string)
     }
 
@@ -281,5 +287,11 @@ public enum CodexUsageLoader {
         default:
             return nil
         }
+    }
+}
+
+private extension CodexUsageSnapshot {
+    var sortDate: Date {
+        capturedAt ?? .distantPast
     }
 }

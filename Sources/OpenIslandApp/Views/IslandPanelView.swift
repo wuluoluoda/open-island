@@ -1319,8 +1319,10 @@ struct IslandPanelView: View {
                 UsageWindowPresentation(
                     id: "codex-\(window.key)",
                     label: window.label,
-                    usedPercentage: window.usedPercentage,
-                    resetsAt: window.resetsAt
+                    usedPercentage: window.leftPercentage,
+                    resetsAt: window.resetsAt,
+                    valueText: "\(Int(window.leftPercentage.rounded()))%",
+                    riskPercentage: window.usedPercentage
                 )
             }
 
@@ -1472,7 +1474,7 @@ struct IslandPanelView: View {
 
             Text(window.valueText ?? "\(window.roundedUsedPercentage)%")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(window.valueText == nil ? usageColor(for: window.usedPercentage) : .white.opacity(0.82))
+                .foregroundStyle(usageTextColor(for: window))
 
             if layout.showsResetTime,
                let resetsAt = window.resetsAt,
@@ -1539,6 +1541,14 @@ struct IslandPanelView: View {
         }
     }
 
+    private func usageTextColor(for window: UsageWindowPresentation) -> Color {
+        if let riskPercentage = window.riskPercentage {
+            return usageColor(for: riskPercentage)
+        }
+
+        return window.valueText == nil ? usageColor(for: window.usedPercentage) : .white.opacity(0.82)
+    }
+
     private func remainingDurationString(until date: Date) -> String? {
         let interval = date.timeIntervalSinceNow
         guard interval > 0 else {
@@ -1586,6 +1596,7 @@ private struct UsageWindowPresentation: Identifiable {
     let usedPercentage: Double
     let resetsAt: Date?
     var valueText: String? = nil
+    var riskPercentage: Double? = nil
 
     var roundedUsedPercentage: Int {
         Int(usedPercentage.rounded())
