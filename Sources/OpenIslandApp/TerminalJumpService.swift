@@ -79,6 +79,11 @@ struct TerminalJumpService {
             aliases: ["codex.app"]
         ),
         TerminalAppDescriptor(
+            displayName: "Claude.app",
+            bundleIdentifier: "com.anthropic.claudefordesktop",
+            aliases: ["claude.app", "claude desktop"]
+        ),
+        TerminalAppDescriptor(
             displayName: "Kaku",
             bundleIdentifier: "fun.tw93.kaku",
             aliases: ["kaku"]
@@ -338,6 +343,9 @@ struct TerminalJumpService {
                 }
                 try openAction(["-b", "com.openai.codex"])
                 return "Activated Codex.app."
+            case "com.anthropic.claudefordesktop":
+                try openAction(["-b", "com.anthropic.claudefordesktop"])
+                return "Activated Claude.app."
             case "com.googlecode.iterm2":
                 if try jumpToITermSession(target) {
                     return "Focused the matching iTerm session."

@@ -58,6 +58,45 @@ struct SessionStateTests {
     }
 
     @Test
+    func claudeDesktopSessionsUseAppLevelLiveness() {
+        let startedAt = Date(timeIntervalSince1970: 1_500)
+        var state = SessionState()
+
+        state.apply(
+            .sessionStarted(
+                SessionStarted(
+                    sessionID: "claude-desktop",
+                    title: "Claude · repo",
+                    tool: .claudeCode,
+                    origin: .live,
+                    summary: "Started Claude session in repo.",
+                    timestamp: startedAt,
+                    jumpTarget: JumpTarget(
+                        terminalApp: "Claude.app",
+                        workspaceName: "repo",
+                        paneTitle: "Claude",
+                        workingDirectory: "/tmp/repo"
+                    )
+                )
+            )
+        )
+
+        #expect(state.session(id: "claude-desktop")?.isClaudeDesktopAppSession == true)
+        #expect(state.session(id: "claude-desktop")?.isHookManaged == false)
+
+        let changedWhenGone = state.markProcessLiveness(aliveSessionIDs: [])
+        #expect(changedWhenGone == ["claude-desktop"])
+        #expect(state.session(id: "claude-desktop")?.isProcessAlive == false)
+        #expect(state.session(id: "claude-desktop")?.isSessionEnded == false)
+        #expect(state.session(id: "claude-desktop")?.isVisibleInIsland == false)
+
+        let changedWhenBack = state.markProcessLiveness(aliveSessionIDs: ["claude-desktop"])
+        #expect(changedWhenBack == ["claude-desktop"])
+        #expect(state.session(id: "claude-desktop")?.isProcessAlive == true)
+        #expect(state.session(id: "claude-desktop")?.isVisibleInIsland == true)
+    }
+
+    @Test
     func removeSessionCardExpiresThroughVisibilityCleanup() {
         let now = Date(timeIntervalSince1970: 2_000)
         var target = AgentSession(

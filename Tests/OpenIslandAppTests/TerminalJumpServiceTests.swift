@@ -481,6 +481,35 @@ struct TerminalJumpServiceTests {
     }
 
     @Test
+    func testClaudeAppJumpActivatesClaudeDesktopApp() throws {
+        let openedArguments = OpenedArgumentsBox()
+        let service = TerminalJumpService(
+            applicationResolver: { bundleIdentifier in
+                bundleIdentifier == "com.anthropic.claudefordesktop" ? URL(fileURLWithPath: "/Applications/Claude.app") : nil
+            },
+            appRunningChecker: { bundleIdentifier in
+                bundleIdentifier == "com.anthropic.claudefordesktop"
+            },
+            openAction: { arguments in
+                openedArguments.values.append(arguments)
+            },
+            appleScriptRunner: { _ in "" }
+        )
+
+        let result = try service.jump(
+            to: JumpTarget(
+                terminalApp: "Claude.app",
+                workspaceName: "my-project",
+                paneTitle: "",
+                workingDirectory: "/Users/test/my-project"
+            )
+        )
+
+        #expect(result == "Activated Claude.app.")
+        #expect(openedArguments.values == [["-b", "com.anthropic.claudefordesktop"]])
+    }
+
+    @Test
     func testTraeCNJumpFallsBackToWorkspaceViaTraeCLI() throws {
         let openedArguments = OpenedArgumentsBox()
         let processInvocations = ProcessInvocationBox()

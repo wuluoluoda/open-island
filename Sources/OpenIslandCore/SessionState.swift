@@ -74,10 +74,10 @@ public struct SessionState: Equatable, Sendable {
             )
             session.isRemote = payload.isRemote
             session.isHookManaged = payload.origin == .live
-            // Codex.app sessions use app-level liveness (NSRunningApplication)
-            // rather than hook-managed processNotSeenCount polling — flag is
+            // Desktop app sessions use app-level liveness rather than
+            // hook-managed processNotSeenCount polling. The classification is
             // derived from jumpTarget.terminalApp via the shared helper.
-            Self.refreshCodexAppClassification(for: &session)
+            Self.refreshAppSessionClassification(for: &session)
             session.isSessionEnded = false
             session.isProcessAlive = true
             session.processNotSeenCount = 0
@@ -163,7 +163,7 @@ public struct SessionState: Equatable, Sendable {
 
             session.jumpTarget = payload.jumpTarget
             session.updatedAt = payload.timestamp
-            Self.refreshCodexAppClassification(for: &session)
+            Self.refreshAppSessionClassification(for: &session)
             upsert(session)
 
         case let .sessionMetadataUpdated(payload):
@@ -316,7 +316,7 @@ public struct SessionState: Equatable, Sendable {
             }
 
             session.jumpTarget = jumpTarget
-            Self.refreshCodexAppClassification(for: &session)
+            Self.refreshAppSessionClassification(for: &session)
             upsert(session)
             changed = true
         }
@@ -324,16 +324,22 @@ public struct SessionState: Equatable, Sendable {
         return changed
     }
 
-    /// Upgrade `isCodexAppSession` if the session's current jumpTarget
-    /// identifies it as a Codex.app session.  Never downgrades — once a
-    /// session is classified as Codex.app, it stays classified even if a
+    /// Upgrade desktop-app session flags if the session's current jumpTarget
+    /// identifies a supported app session. Never downgrades — once a
+    /// session is classified as app-backed, it stays classified even if a
     /// later resolver pass replaces the jumpTarget with a generic one.
     /// This handles the case where the first hook fires before terminalApp
     /// is known and a later `jumpTargetUpdated` fills it in.
-    static func refreshCodexAppClassification(for session: inout AgentSession) {
+    static func refreshAppSessionClassification(for session: inout AgentSession) {
         if session.jumpTarget?.terminalApp == "Codex.app" {
             session.isCodexAppSession = true
             // Codex.app sessions use app-level liveness, not hook-managed polling.
+            session.isHookManaged = false
+        }
+        if session.jumpTarget?.terminalApp == "Claude.app" {
+            session.isClaudeDesktopAppSession = true
+            // Claude Desktop hooks are launched by the app, so there is no
+            // durable CLI process to poll after each hook invocation.
             session.isHookManaged = false
         }
     }
@@ -364,10 +370,9 @@ public struct SessionState: Equatable, Sendable {
                 continue
             }
 
-            // Codex.app sessions use app-level liveness (NSRunningApplication)
-            // rather than subprocess matching.  Phase is driven by hooks or
-            // the rollout watcher / app-server notifications.
-            if session.isCodexAppSession {
+            // Desktop app sessions use app-level liveness (NSRunningApplication)
+            // rather than subprocess matching. Phase is driven by hook/app events.
+            if session.isCodexAppSession || session.isClaudeDesktopAppSession {
                 let wasAlive = session.isProcessAlive
                 session.isProcessAlive = aliveSessionIDs.contains(id)
                 if session.isProcessAlive != wasAlive {
