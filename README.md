@@ -33,14 +33,15 @@
 
 ## Project Lineage
 
-Respect Island is based on [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island) and is distributed under the GNU General Public License v3.0. This repository is maintained as an independent GPLv3 project by [wuluoluoda](https://github.com/wuluoluoda), with emphasis on a Codex-heavy local workflow.
+Respect Island is based on [Octane0411/open-vibe-island](https://github.com/Octane0411/open-vibe-island) and is distributed under the GNU General Public License v3.0. This repository is maintained as an independent GPLv3 project by [wuluoluoda](https://github.com/wuluoluoda), with emphasis on local-first control for Codex, Claude Code, and other coding agents.
 
 ### What This Project Adds
 
-- **Codex Desktop App radar** — a denser operational panel for live thread/turn state, reconnecting sessions, and interrupted work.
-- **More stable Codex session tracking** — row ordering, transient reconnects, stale interrupted states, completed-session expiry, and session labels have been tightened.
-- **Overlay behavior fixes** — hover recovery, directional shelf expansion, and panel height handling are tuned for long Codex sessions.
-- **Reviewable local workflow** — build checkpoint tags, project workflow notes, and broader tests document how this project is packaged and rolled back.
+- **Codex Desktop App radar** — real-time thread/turn lifecycle through the Codex app-server, deep links back to exact conversations, and clearer handling for reconnecting or interrupted work.
+- **Claude Code awareness** — Claude Desktop Code tab liveness, local 5-hour/7-day usage windows, status-line integration, and opt-in token/cost visibility.
+- **Agent control surface** — hook install/uninstall, permission and question cards, session jump-back, card cleanup, reminder sounds, and TypeWhisper status in one native island.
+- **Energy-conscious local runtime** — quiet polling profiles, on-demand usage refresh, gated rollout fallback, and project workflow notes that treat background energy impact as correctness work.
+- **Respect Island packaging** — refreshed app icon, local app bundle, DMG/ZIP assets, release workflow, and bilingual docs use the Respect Island name consistently.
 
 Download the current DMG from [GitHub Releases](https://github.com/wuluoluoda/open-island/releases). Local builds may be unsigned, so macOS Gatekeeper can require right-clicking **Open** or removing quarantine after download.
 
@@ -201,7 +202,7 @@ Please help me file a GitHub issue. Do the following:
    - Run `sw_vers` to get macOS version
    - Run `swift --version` to get Swift version
    - Check if Respect Island is running: `ps aux | grep -i "open.island\|OpenIslandApp" | grep -v grep`
-   - Get the app version: `defaults read ~/Applications/Open\ Island\ Dev.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null || echo "unknown"`
+   - Get the app version: `defaults read ~/Applications/Respect\ Island.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null || echo "unknown"`
    - Check which terminal I'm using
 
 2. Ask me to describe:
