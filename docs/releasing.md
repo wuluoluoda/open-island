@@ -32,8 +32,8 @@ Follow [Semantic Versioning](https://semver.org/):
 6. **Create the release**:
    ```bash
    gh release create v<version> \
-     "output/package/Respect Island.dmg#Open.Island.dmg" \
-     "output/package/Respect Island.zip#Open.Island.zip" \
+     "output/package/Respect Island.dmg#Respect Island.dmg" \
+     "output/package/Respect Island.zip#Respect Island.zip" \
      --target main \
      --title "Respect Island v<version> — <Title>" \
      --notes-file release-notes.md
@@ -122,7 +122,7 @@ Each release needs a new `<item>` entry. Template:
     <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
     <pubDate>Thu, 06 Apr 2026 00:00:00 +0000</pubDate>
     <enclosure
-        url="https://github.com/Octane0411/open-vibe-island/releases/download/vX.Y.Z/Open.Island.zip"
+        url="https://github.com/wuluoluoda/open-island/releases/download/vX.Y.Z/Respect%20Island.zip"
         type="application/octet-stream"
         sparkle:edSignature="PASTE_SIGNATURE_HERE"
         length="PASTE_LENGTH_HERE"
