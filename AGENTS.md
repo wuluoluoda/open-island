@@ -80,9 +80,9 @@ See [.codex/skills/open-island-workflow/SKILL.md](/Users/wuluoluo/work/code.app.
 
 - Treat the repository executable product `OpenIslandApp` as the canonical OSS app runtime.
 - Treat `swift run OpenIslandApp` and the Xcode app target as the source-of-truth way to run the current branch's app code.
-- Treat `~/Applications/Respect Island Dev.app` as a local development bundle wrapper around the repo-built `OpenIslandApp`, not as a separate product line.
-- Use `Respect Island Dev.app` for manual OSS app verification when bundle semantics, LaunchServices, or installed-hook behavior matter.
-- When the user asks to launch or restart `Respect Island Dev.app`, refresh the bundle from the current repo first with `zsh scripts/launch-dev-app.sh` instead of only running `open -na`. Opening the bundle alone can relaunch a stale binary.
+- Treat `~/Applications/Respect Island.app` as a local development bundle wrapper around the repo-built `OpenIslandApp`, not as a separate product line.
+- Use `Respect Island.app` for manual OSS app verification when bundle semantics, LaunchServices, or installed-hook behavior matter.
+- When the user asks to launch or restart `Respect Island.app`, refresh the bundle from the current repo first with `zsh scripts/launch-dev-app.sh` instead of only running `open -na`. Opening the bundle alone can relaunch a stale binary.
 - For work that touches Accessibility, Automation, precision jump, or other macOS TCC-sensitive behavior, run `zsh scripts/setup-dev-signing.sh` once before repeated manual verification so the dev bundle keeps a stable local signing identity.
 - Use `scripts/harness.sh smoke` or `scripts/smoke-dev-app.sh` only for deterministic harness runs; those commands intentionally launch the repo executable directly rather than the installed dev bundle.
 - Treat any in-app label such as `Respect Island OSS` as UI copy only, not as evidence of a third app target.
@@ -92,7 +92,7 @@ See [.codex/skills/open-island-workflow/SKILL.md](/Users/wuluoluo/work/code.app.
 
 - Run targeted checks that match the change.
 - If no automated verification exists yet, state that explicitly in the final summary and still commit the change.
-- For app-runtime changes, verify that `~/Applications/Respect Island Dev.app` has been refreshed from the intended commit with `zsh scripts/launch-dev-app.sh`, then confirm the running process or binary timestamp.
+- For app-runtime changes, verify that `~/Applications/Respect Island.app` has been refreshed from the intended commit with `zsh scripts/launch-dev-app.sh`, then confirm the running process or binary timestamp.
 - After a verified integration checkpoint that may be used for builds, create an annotated Git tag on the exact commit using a non-release prefix such as `build/<topic>-YYYYMMDD-<shortsha>`.
 - If the checkpoint is intended to be a precise product version or release version, ask the user before creating a version tag such as `v1.0.30`.
 - In final summaries, include the tag name when a tag is created, and distinguish build checkpoint tags from release/version tags.
