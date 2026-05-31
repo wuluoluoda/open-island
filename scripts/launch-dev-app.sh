@@ -42,7 +42,7 @@ mkdir -p "$bundle_dir/Contents/MacOS" "$bundle_dir/Contents/Helpers" "$bundle_di
 
 # Kill any running instance before copying so the binary isn't locked.
 osascript -e 'tell application "Respect Island" to quit' 2>/dev/null || true
-pkill -9 -x OpenIslandApp 2>/dev/null || true
+pkill -9 -f "$bundle_binary" 2>/dev/null || true
 sleep 2
 
 command cp "$app_binary" "$bundle_binary"
