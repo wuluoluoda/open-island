@@ -1,4 +1,4 @@
 interface:
-  display_name: "Open Island Tag Checkpoint"
-  short_description: "Judge and create Open Island build tags"
+  display_name: "Respect Island Tag Checkpoint"
+  short_description: "Judge and create Respect Island build tags"
   default_prompt: "Use $open-island-tag-checkpoint to decide whether the latest main integration should receive a build or release tag."

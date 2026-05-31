@@ -2,7 +2,7 @@
 # clean-user-env.sh — Reset to a clean "new user" state for testing.
 # Usage: zsh scripts/clean-user-env.sh [--dry-run]
 #
-# This removes all Open Island (and legacy Vibe Island) artifacts from the
+# This removes all Respect Island (and legacy Vibe Island) artifacts from the
 # current user's environment, simulating a fresh install.
 
 set -euo pipefail
@@ -33,7 +33,7 @@ clean_glob() {
     done
 }
 
-echo "==> Quit Open Island if running"
+echo "==> Quit Respect Island if running"
 if ! $DRY_RUN; then
     pkill -x OpenIslandApp 2>/dev/null || true
     sleep 0.5
@@ -42,13 +42,13 @@ fi
 uid="$(id -u)"
 
 echo ""
-echo "==> Cleaning Open Island artifacts"
+echo "==> Cleaning Respect Island artifacts"
 
 # --- Hook configurations ---
 echo "--- Hook configs ---"
 
 # Claude-style forks (.claude / .qoder / .qwen / .factory / .codebuddy / .gemini):
-# each has a settings.json that may contain Open Island hook entries, plus
+# each has a settings.json that may contain Respect Island hook entries, plus
 # sidecar manifests and backups. Strip OpenIsland references but preserve
 # any user-owned hooks (including Vibe Island) so we don't trash setups
 # the test isn't supposed to touch.
@@ -98,7 +98,7 @@ for d in ~/.claude ~/.qoder ~/.qwen ~/.factory ~/.codebuddy ~/.gemini; do
     strip_claude_style "$d"
 done
 
-# Codex: remove Open Island entries from hooks.json
+# Codex: remove Respect Island entries from hooks.json
 codex_hooks=~/.codex/hooks.json
 if [[ -f "$codex_hooks" ]]; then
     if $DRY_RUN; then
@@ -245,6 +245,6 @@ else
     green "Done! Environment is clean."
     echo ""
     echo "Next steps:"
-    echo "  1. Install Open Island.dmg from the latest release"
+    echo "  1. Install Respect Island.dmg from the latest release"
     echo "  2. Launch the app — you are now a fresh user"
 fi

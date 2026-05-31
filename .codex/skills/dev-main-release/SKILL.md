@@ -1,13 +1,13 @@
 ---
 name: dev-main-release
-description: Promote this Open Island repository's local dev workstream into main and publish/update the GitHub DMG release. Use when the user asks to merge dev into main, promote dev, ship a release, push dev/main remotely, cut a v* release tag, update GitHub Releases assets, or refresh the Open Island DMG/appcast after dev validation.
+description: Promote this Respect Island repository's local dev workstream into main and publish/update the GitHub DMG release. Use when the user asks to merge dev into main, promote dev, ship a release, push dev/main remotely, cut a v* release tag, update GitHub Releases assets, or refresh the Respect Island DMG/appcast after dev validation.
 ---
 
 # Dev Main Release
 
 ## Overview
 
-Use this skill for the full dev-to-main release path. Do not stop at a local merge: this workflow must push to the correct remote and must verify that GitHub Releases contains the updated `Open Island.dmg`.
+Use this skill for the full dev-to-main release path. Do not stop at a local merge: this workflow must push to the correct remote and must verify that GitHub Releases contains the updated `Respect Island.dmg`.
 
 Primary references when details are needed:
 - `docs/releasing.md` for release notes, appcast, Sparkle, and asset expectations.
@@ -22,7 +22,7 @@ Primary references when details are needed:
 4. Push local `dev` before creating or merging the main PR.
 5. Prefer a PR from `dev` to `main`. Directly merge/push `main` only if the user explicitly requests direct integration.
 6. Push `main` and the final `v*` tag to the release remote. A local-only merge is not complete.
-7. Do not report success until the GitHub release exists and has a downloadable `Open Island.dmg` asset for the intended tag.
+7. Do not report success until the GitHub release exists and has a downloadable `Respect Island.dmg` asset for the intended tag.
 8. Treat build checkpoint tags (`build/...`) as local verification markers, not GitHub release tags.
 
 ## Remote Selection
@@ -111,11 +111,11 @@ Only tag the exact `main` commit intended for release:
 ```bash
 git switch main
 git status -sb
-git tag -a v<version> -m "Open Island v<version>"
+git tag -a v<version> -m "Respect Island v<version>"
 git push <remote> v<version>
 ```
 
-This tag push should trigger `.github/workflows/release.yml`, which builds, signs/notarizes when secrets are present, creates `Open Island.dmg` and `Open Island.zip`, updates `appcast.xml` via PR when Sparkle signing is available, and creates a draft GitHub Release.
+This tag push should trigger `.github/workflows/release.yml`, which builds, signs/notarizes when secrets are present, creates `Respect Island.dmg` and `Respect Island.zip`, updates `appcast.xml` via PR when Sparkle signing is available, and creates a draft GitHub Release.
 
 ### 5. Watch GitHub release workflow
 
@@ -142,13 +142,13 @@ Verify the release and DMG asset:
 gh release view v<version> --json tagName,isDraft,url,assets
 ```
 
-The assets list must include `Open Island.dmg` and `Open Island.zip`. Download-check the DMG when practical:
+The assets list must include `Respect Island.dmg` and `Respect Island.zip`. Download-check the DMG when practical:
 
 ```bash
 tmpdir="$(mktemp -d)"
-gh release download v<version> --pattern 'Open Island.dmg*' --dir "$tmpdir"
+gh release download v<version> --pattern 'Respect Island.dmg*' --dir "$tmpdir"
 ls -lh "$tmpdir"
-shasum -a 256 "$tmpdir"/Open\ Island.dmg*
+shasum -a 256 "$tmpdir"/Respect\ Island.dmg*
 ```
 
 If the workflow updated `appcast.xml`, verify the appcast PR merged and `main` contains the new version entry. If Sparkle signing was skipped, say that appcast was not updated and why.
@@ -167,6 +167,6 @@ Report:
 - Remote pushed for `dev`, `main`, and `v<version>`.
 - Verification commands and outcomes.
 - GitHub Release URL.
-- Whether `Open Island.dmg` and `Open Island.zip` were present and downloadable.
+- Whether `Respect Island.dmg` and `Respect Island.zip` were present and downloadable.
 - Whether `appcast.xml` was updated or skipped.
 - Any remaining manual action, such as publishing a draft release.

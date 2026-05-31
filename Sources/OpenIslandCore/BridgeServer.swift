@@ -342,7 +342,7 @@ public final class BridgeServer: @unchecked Sendable {
                     phase = .running
                 case let .deny(message, _):
                     directive = CursorHookDirective(continue: true, permission: .deny, agentMessage: message)
-                    summary = message ?? "Permission denied in Open Island."
+                    summary = message ?? "Permission denied in Respect Island."
                     phase = .completed
                 }
 
@@ -384,7 +384,7 @@ public final class BridgeServer: @unchecked Sendable {
                     : .sessionCompleted(
                         SessionCompleted(
                             sessionID: sessionID,
-                            summary: "Permission denied in Open Island.",
+                            summary: "Permission denied in Respect Island.",
                             timestamp: .now
                         )
                     )
@@ -1401,7 +1401,7 @@ public final class BridgeServer: @unchecked Sendable {
             .actionableStateResolved(
                 ActionableStateResolved(
                     sessionID: sessionID,
-                    summary: "Approval was handled outside Open Island.",
+                    summary: "Approval was handled outside Respect Island.",
                     timestamp: .now
                 )
             )
@@ -1499,7 +1499,7 @@ public final class BridgeServer: @unchecked Sendable {
             .actionableStateResolved(
                 ActionableStateResolved(
                     sessionID: sessionID,
-                    summary: "Approval was handled outside Open Island.",
+                    summary: "Approval was handled outside Respect Island.",
                     timestamp: .now
                 )
             )
@@ -1661,8 +1661,8 @@ public final class BridgeServer: @unchecked Sendable {
             phase = .running
 
         case let (.permission(_), .deny(message, _)):
-            directive = .deny(reason: message ?? "Permission denied in Open Island.")
-            summary = message ?? "Permission denied in Open Island."
+            directive = .deny(reason: message ?? "Permission denied in Respect Island.")
+            summary = message ?? "Permission denied in Respect Island."
             phase = .completed
 
         case (.question, .allowOnce):
@@ -1737,7 +1737,7 @@ public final class BridgeServer: @unchecked Sendable {
             .actionableStateResolved(
                 ActionableStateResolved(
                     sessionID: sessionID,
-                    summary: "Approval was handled outside Open Island.",
+                    summary: "Approval was handled outside Respect Island.",
                     timestamp: .now
                 )
             )
@@ -2261,7 +2261,7 @@ public final class BridgeServer: @unchecked Sendable {
         if approved {
             response = .acknowledged
         } else {
-            response = .codexHookDirective(.deny(reason: "Permission denied in Open Island."))
+            response = .codexHookDirective(.deny(reason: "Permission denied in Respect Island."))
         }
 
         send(.response(response), to: pendingApproval.clientID)
@@ -2290,9 +2290,9 @@ public final class BridgeServer: @unchecked Sendable {
 
         case let (.permission(_), .deny(message, interrupt)):
             directive = .permissionRequest(
-                .deny(message: message ?? "Permission denied in Open Island.", interrupt: interrupt)
+                .deny(message: message ?? "Permission denied in Respect Island.", interrupt: interrupt)
             )
-            summary = message ?? "Permission denied in Open Island."
+            summary = message ?? "Permission denied in Respect Island."
             phase = .completed
 
         case let (.question(payload, _), .allowOnce(updatedInput, updatedPermissions)):

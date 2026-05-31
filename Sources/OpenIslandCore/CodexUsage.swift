@@ -108,17 +108,36 @@ public enum CodexUsageLoader {
             return lhs.modifiedAt > rhs.modifiedAt
         }
 
-        for candidate in sortedCandidates {
-            if let snapshot = loadLatestSnapshot(
-                from: candidate.fileURL,
-                modifiedAt: candidate.modifiedAt
-            ) {
-                return snapshot
+        let snapshots = sortedCandidates
+            .compactMap { candidate in
+                loadLatestSnapshot(from: candidate.fileURL, modifiedAt: candidate.modifiedAt)
             }
+
+        guard let newestSnapshot = snapshots.max(by: isOlderUsageSnapshot) else {
+            return nil
         }
 
-        return nil
+        let freshnessCutoff = newestSnapshot.sortDate.addingTimeInterval(-Self.accountLimitFreshnessWindow)
+        return snapshots
+            .filter { $0.sortDate >= freshnessCutoff }
+            .max { lhs, rhs in
+                if lhs.isAccountLimit != rhs.isAccountLimit {
+                    return !lhs.isAccountLimit && rhs.isAccountLimit
+                }
+
+                return isOlderUsageSnapshot(lhs, rhs)
+            }
     }
+
+    private static func isOlderUsageSnapshot(_ lhs: CodexUsageSnapshot, _ rhs: CodexUsageSnapshot) -> Bool {
+        if lhs.sortDate == rhs.sortDate {
+            return lhs.sourceFilePath.localizedStandardCompare(rhs.sourceFilePath) == .orderedAscending
+        }
+
+        return lhs.sortDate < rhs.sortDate
+    }
+
+    private static let accountLimitFreshnessWindow: TimeInterval = 24 * 60 * 60
 
     private static func loadLatestSnapshot(from fileURL: URL, modifiedAt: Date) -> CodexUsageSnapshot? {
         guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
@@ -232,6 +251,11 @@ public enum CodexUsageLoader {
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) {
+            return date
+        }
+
+        formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: string)
     }
 
@@ -281,5 +305,15 @@ public enum CodexUsageLoader {
         default:
             return nil
         }
+    }
+}
+
+private extension CodexUsageSnapshot {
+    var isAccountLimit: Bool {
+        limitID == "codex"
+    }
+
+    var sortDate: Date {
+        capturedAt ?? .distantPast
     }
 }

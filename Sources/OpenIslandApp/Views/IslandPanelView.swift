@@ -153,8 +153,14 @@ struct IslandPanelView: View {
         }
     }
 
+    private var typeWhisperClosedPresence: Bool {
+        model.typeWhisperStatusEnabled
+            && model.liveSessionCount == 0
+            && model.typeWhisperSnapshot.shouldSurface
+    }
+
     private var hasClosedPresence: Bool {
-        model.liveSessionCount > 0
+        model.liveSessionCount > 0 || typeWhisperClosedPresence
     }
 
     private var showsIdleEdgeWhenCollapsed: Bool {
@@ -163,16 +169,16 @@ struct IslandPanelView: View {
 
     /// Whether any session has activity worth showing in the closed notch
     private var hasClosedActivity: Bool {
-        guard let session = closedSpotlightSession else {
-            return false
+        if let session = closedSpotlightSession {
+            switch model.codexOperationalStatus(for: session) {
+            case .waitingApproval, .waitingInput, .reconnecting, .connecting, .interrupted, .detached, .stalled, .loopSuspected, .running:
+                return true
+            case .recentlyCompleted, .completed:
+                return false
+            }
         }
 
-        switch model.codexOperationalStatus(for: session) {
-        case .waitingApproval, .waitingInput, .reconnecting, .connecting, .interrupted, .detached, .stalled, .loopSuspected, .running:
-            return true
-        case .recentlyCompleted, .completed:
-            return false
-        }
+        return typeWhisperClosedPresence && model.typeWhisperSnapshot.isLoaded
     }
 
     private var closedSpotlightNeedsAction: Bool {
@@ -183,7 +189,10 @@ struct IslandPanelView: View {
     }
 
     private var closedActivityToolName: String? {
-        closedSpotlightSession?.currentToolName
+        if let toolName = closedSpotlightSession?.currentToolName {
+            return toolName
+        }
+        return typeWhisperClosedPresence ? "TypeWhisper" : nil
     }
 
     private var closedActivityPreview: String? {
@@ -193,7 +202,10 @@ struct IslandPanelView: View {
             }
             return session.currentCommandPreviewText
         }
-        return nil
+        guard typeWhisperClosedPresence else {
+            return nil
+        }
+        return typeWhisperStatusTitle(model.typeWhisperSnapshot)
     }
 
     private func shouldHideActivityPreview(for toolName: String?) -> Bool {
@@ -205,8 +217,8 @@ struct IslandPanelView: View {
         }
     }
 
-    /// Scout icon tint: blue if any running, green if any live, else gray.
-    private var scoutTint: Color {
+    /// Brand glyph tint: blue if any running, green if any live, else gray.
+    private var brandTint: Color {
         if model.isCustomAppearance, let phase = closedSpotlightSession?.phase {
             return model.statusColor(for: phase)
         }
@@ -217,11 +229,14 @@ struct IslandPanelView: View {
         if !sessions.isEmpty {
             return Color(red: 0.26, green: 0.91, blue: 0.42) // #42E86B idle green
         }
+        if typeWhisperClosedPresence {
+            return typeWhisperTint(model.typeWhisperSnapshot)
+        }
         return Color.white.opacity(0.4) // gray
     }
 
     private var closedBadgeText: String {
-        "\(model.liveSessionCount)"
+        model.liveSessionCount > 0 ? "\(model.liveSessionCount)" : "TW"
     }
 
     private var countBadgeWidth: CGFloat {
@@ -370,6 +385,24 @@ struct IslandPanelView: View {
                     surfaceShape
                         .stroke(Color.white.opacity(hidesClosedSurfaceChrome ? 0 : (usesOpenedVisualState ? 0.07 : 0.04)), lineWidth: 1)
                 }
+                .overlay {
+                    if !hidesClosedSurfaceChrome && !usesOpenedVisualState && hasClosedPresence {
+                        surfaceShape
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        brandTint.opacity(0.78),
+                                        Color(red: 0.52, green: 0.42, blue: 1.0).opacity(0.32),
+                                        brandTint.opacity(0.18),
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1
+                            )
+                            .shadow(color: brandTint.opacity(hasClosedActivity ? 0.45 : 0.22), radius: 6, x: 0, y: 0)
+                    }
+                }
                 .overlay(alignment: .top) {
                     Capsule()
                         .fill(Color.black)
@@ -424,16 +457,20 @@ struct IslandPanelView: View {
             HStack(spacing: 0) {
                 if hasClosedPresence {
                     HStack(spacing: 4) {
-                        if model.isCustomAppearance {
+                        if typeWhisperClosedPresence {
+                            typeWhisperIconView
+                                .frame(width: 18, height: 18)
+                                .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
+                        } else if model.isCustomAppearance {
                             IslandPixelGlyph(
-                                tint: scoutTint,
+                                tint: brandTint,
                                 style: model.islandPixelShapeStyle,
                                 isAnimating: hasClosedActivity,
                                 customAvatarImage: model.customAvatarImage
                             )
                             .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         } else {
-                            OpenIslandIcon(size: 14, isAnimating: hasClosedActivity, tint: scoutTint)
+                            OpenIslandIcon(size: 15, isAnimating: hasClosedActivity, tint: brandTint)
                                 .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
                         }
 
@@ -468,7 +505,7 @@ struct IslandPanelView: View {
                     let attentionBalanceWidth: CGFloat = closedSpotlightNeedsAction ? 18 : 0
                     ClosedTextBadge(
                         title: closedBadgeText,
-                        tint: closedSpotlightNeedsAction ? .orange : scoutTint
+                        tint: closedSpotlightNeedsAction ? .orange : brandTint
                     )
                     .matchedGeometryEffect(id: "right-indicator", in: notchNamespace, isSource: true)
                     .frame(width: max(sideWidth, countBadgeWidth) + attentionBalanceWidth)
@@ -567,6 +604,10 @@ struct IslandPanelView: View {
                 installHooksHint
             }
 
+            if model.typeWhisperStatusEnabled && model.typeWhisperSnapshot.shouldSurface {
+                typeWhisperStatusPanel
+            }
+
             if model.shouldShowSessionBootstrapPlaceholder {
                 sessionBootstrapPlaceholder
             } else if model.islandListSessions.isEmpty {
@@ -652,6 +693,149 @@ struct IslandPanelView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var typeWhisperStatusPanel: some View {
+        let snapshot = model.typeWhisperSnapshot
+        let tint = typeWhisperTint(snapshot)
+
+        return HStack(spacing: 8) {
+            typeWhisperIconView
+                .frame(width: 20, height: 20)
+
+            Text("TypeWhisper")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+                .layoutPriority(2)
+
+            typeWhisperPill(typeWhisperStatusTitle(snapshot), tint: tint)
+                .layoutPriority(1)
+
+            typeWhisperPill(typeWhisperUnloadCountTitle(snapshot.modelUnloadCountToday), tint: .white.opacity(0.52))
+
+            if let modelLabel = typeWhisperCompactModelLabel(snapshot) {
+                Text(modelLabel)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            if snapshot.apiServerEnabled {
+                typeWhisperPill("API on", tint: .orange.opacity(0.86))
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                model.refreshTypeWhisperFootprint()
+            } label: {
+                Image(systemName: model.isRefreshingTypeWhisperFootprint ? "hourglass" : "arrow.clockwise")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.32), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            }
+            .buttonStyle(.borderless)
+            .disabled(model.isRefreshingTypeWhisperFootprint || snapshot.processID == nil)
+            .help("Refresh TypeWhisper memory")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 0.5)
+        )
+    }
+
+    private var typeWhisperIconView: some View {
+        Image("typewhisper-icon", bundle: .appResources)
+            .resizable()
+            .interpolation(.high)
+            .antialiased(true)
+            .scaledToFit()
+            .padding(2)
+            .background(Color.black.opacity(0.32), in: Circle())
+            .overlay(
+                Circle()
+                    .stroke(.white.opacity(0.08), lineWidth: 0.5)
+            )
+    }
+
+    private func typeWhisperPill(_ title: String, tint: Color) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.black.opacity(0.34), in: Capsule())
+    }
+
+    private func typeWhisperTint(_ snapshot: TypeWhisperSnapshot) -> Color {
+        if snapshot.apiServerEnabled {
+            return .orange.opacity(0.9)
+        }
+
+        switch snapshot.resolvedLoadState {
+        case .notRunning:
+            return .white.opacity(0.42)
+        case .unloaded:
+            return Color(red: 0.29, green: 0.86, blue: 0.46)
+        case .loaded:
+            return Color(red: 0.34, green: 0.61, blue: 0.99)
+        }
+    }
+
+    private func typeWhisperStatusTitle(_ snapshot: TypeWhisperSnapshot) -> String {
+        switch snapshot.resolvedLoadState {
+        case .notRunning:
+            return "Not running"
+        case .unloaded:
+            return "Model unloaded"
+        case .loaded:
+            let modelName = snapshot.effectiveModelName?.lowercased() ?? ""
+            let engine = snapshot.selectedEngine?.lowercased() ?? ""
+            if modelName.contains("qwen3") || engine == "qwen3" {
+                return "Qwen3 loaded"
+            }
+            return "Model loaded"
+        }
+    }
+
+    private func typeWhisperCompactModelLabel(_ snapshot: TypeWhisperSnapshot) -> String? {
+        switch snapshot.resolvedLoadState {
+        case .notRunning:
+            return nil
+        case .unloaded:
+            return snapshot.selectedModel?.nonEmpty
+        case .loaded:
+            var parts: [String] = []
+            if let model = snapshot.effectiveModelName {
+                parts.append(model)
+            }
+            if let memory = snapshot.memoryFootprintMegabytes {
+                parts.append(memoryLabel(memory))
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
+    }
+
+    private func typeWhisperUnloadCountTitle(_ count: Int) -> String {
+        "\(count) today"
+    }
+
+    private func memoryLabel(_ megabytes: Double) -> String {
+        if megabytes >= 1_024 {
+            return String(format: "%.1fGB", megabytes / 1_024)
+        }
+        return "\(Int(megabytes.rounded()))MB"
     }
 
     private var actionableSessionID: String? {
@@ -1093,6 +1277,30 @@ struct IslandPanelView: View {
                 )
             }
 
+            if let fiveHourTokens = snapshot.tokenUsage?.fiveHour {
+                windows.append(
+                    UsageWindowPresentation(
+                        id: "claude-token-5h",
+                        label: "5h",
+                        usedPercentage: 0,
+                        resetsAt: nil,
+                        valueText: Self.usageAmountText(for: fiveHourTokens)
+                    )
+                )
+            }
+
+            if let sevenDayTokens = snapshot.tokenUsage?.sevenDay {
+                windows.append(
+                    UsageWindowPresentation(
+                        id: "claude-token-7d",
+                        label: "7d",
+                        usedPercentage: 0,
+                        resetsAt: nil,
+                        valueText: Self.usageAmountText(for: sevenDayTokens)
+                    )
+                )
+            }
+
             if windows.isEmpty == false {
                 providers.append(
                     UsageProviderPresentation(
@@ -1111,8 +1319,10 @@ struct IslandPanelView: View {
                 UsageWindowPresentation(
                     id: "codex-\(window.key)",
                     label: window.label,
-                    usedPercentage: window.usedPercentage,
-                    resetsAt: window.resetsAt
+                    usedPercentage: window.leftPercentage,
+                    resetsAt: window.resetsAt,
+                    valueText: "\(Int(window.leftPercentage.rounded()))%",
+                    riskPercentage: window.usedPercentage
                 )
             }
 
@@ -1262,9 +1472,9 @@ struct IslandPanelView: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
 
-            Text("\(window.roundedUsedPercentage)%")
+            Text(window.valueText ?? "\(window.roundedUsedPercentage)%")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(usageColor(for: window.usedPercentage))
+                .foregroundStyle(usageTextColor(for: window))
 
             if layout.showsResetTime,
                let resetsAt = window.resetsAt,
@@ -1280,6 +1490,35 @@ struct IslandPanelView: View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.white.opacity(opacity))
+    }
+
+    private static func usageAmountText(for window: ClaudeTokenUsageWindow) -> String {
+        if let cost = window.estimatedCostCNY {
+            return estimatedCostText(cost)
+        }
+        return "\(compactTokenCount(window.totalTokens)) tok"
+    }
+
+    private static func estimatedCostText(_ value: Double) -> String {
+        if value < 0.01 {
+            return String(format: "¥%.4f", value)
+        }
+        if value < 1 {
+            return String(format: "¥%.2f", value)
+        }
+        return String(format: "¥%.1f", value)
+    }
+
+    private static func compactTokenCount(_ value: Int) -> String {
+        if value >= 1_000_000 {
+            let millions = Double(value) / 1_000_000
+            return String(format: millions >= 10 ? "%.0fM" : "%.1fM", millions)
+        }
+        if value >= 1_000 {
+            let thousands = Double(value) / 1_000
+            return String(format: thousands >= 10 ? "%.0fK" : "%.1fK", thousands)
+        }
+        return "\(value)"
     }
 
     private func headerPill(_ title: String, tint: Color) -> some View {
@@ -1300,6 +1539,14 @@ struct IslandPanelView: View {
         default:
             .green.opacity(0.95)
         }
+    }
+
+    private func usageTextColor(for window: UsageWindowPresentation) -> Color {
+        if let riskPercentage = window.riskPercentage {
+            return usageColor(for: riskPercentage)
+        }
+
+        return window.valueText == nil ? usageColor(for: window.usedPercentage) : .white.opacity(0.82)
     }
 
     private func remainingDurationString(until date: Date) -> String? {
@@ -1348,6 +1595,8 @@ private struct UsageWindowPresentation: Identifiable {
     let label: String
     let usedPercentage: Double
     let resetsAt: Date?
+    var valueText: String? = nil
+    var riskPercentage: Double? = nil
 
     var roundedUsedPercentage: Int {
         Int(usedPercentage.rounded())
@@ -1485,6 +1734,12 @@ private struct IslandSessionRow: View {
                                 compactBadge(terminalBadge, presence: presence)
                             }
                             compactBadge(session.spotlightAgeBadge, presence: presence)
+                            if isInteractive {
+                                CardDeleteButton(
+                                    title: lang.t("island.card.delete"),
+                                    action: onDelete
+                                )
+                            }
                             if let onDismiss {
                                 DismissButton(action: onDismiss)
                             }
@@ -1614,13 +1869,6 @@ private struct IslandSessionRow: View {
         .onHover { hovering in
             guard isInteractive else { return }
             isHighlighted = hovering
-        }
-        .contextMenu {
-            if isInteractive {
-                Button(role: .destructive, action: onDelete) {
-                    Label(lang.t("island.card.delete"), systemImage: "trash")
-                }
-            }
         }
         .onChange(of: isInteractive) { _, interactive in
             if !interactive {
@@ -2414,7 +2662,7 @@ private struct IslandWideButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Open Island icon (left side of closed notch)
+// MARK: - Respect Island icon (left side of closed notch)
 
 private struct OpenIslandIcon: View {
     let size: CGFloat
@@ -2456,7 +2704,23 @@ private struct ClosedTextBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Color(red: 0.14, green: 0.14, blue: 0.15), in: Capsule())
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.10),
+                        tint.opacity(0.16),
+                        Color.black.opacity(0.36),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: Capsule()
+            )
+            .overlay {
+                Capsule()
+                    .stroke(tint.opacity(0.42), lineWidth: 1)
+            }
+            .shadow(color: tint.opacity(0.28), radius: 3, x: 0, y: 0)
     }
 }
 
@@ -2556,7 +2820,7 @@ private struct CentralActivityLabel: View {
         if lower.contains("web") || lower.contains("fetch") {
             return "globe"
         }
-        if lower.contains("voice") || lower.contains("dictation") {
+        if lower.contains("typewhisper") || lower.contains("voice") || lower.contains("dictation") {
             return "waveform"
         }
         if lower.contains("task") || lower.contains("agent") || lower.contains("subagent") {
@@ -2678,6 +2942,26 @@ private struct DismissButton: View {
                 .foregroundStyle(.white.opacity(isHovered ? 0.8 : 0.4))
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+private struct CardDeleteButton: View {
+    let title: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "trash")
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(isHovered ? 0.78 : 0.36))
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .help(title)
         .onHover { isHovered = $0 }
     }
 }

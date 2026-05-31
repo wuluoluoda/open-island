@@ -1153,6 +1153,15 @@ public extension ClaudeHookPayload {
             return "Zellij"
         }
 
+        // Claude Desktop Code tab runs Claude Code hooks from Claude.app.
+        // Detect it before TERM_PROGRAM because GUI launches can inherit the
+        // terminal environment used to open the app.
+        if let bundleID = environment["__CFBundleIdentifier"]?.lowercased(),
+           bundleID == "com.anthropic.claudefordesktop"
+            || (bundleID.contains("anthropic") && bundleID.contains("claude")) {
+            return "Claude.app"
+        }
+
         // TERM_PROGRAM is the only authoritative terminal signal. Each
         // terminal sets it explicitly when it execs the user's shell, so
         // unlike per-app env vars (GHOSTTY_RESOURCES_DIR,

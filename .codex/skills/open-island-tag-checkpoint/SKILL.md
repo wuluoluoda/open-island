@@ -1,13 +1,13 @@
 ---
 name: open-island-tag-checkpoint
-description: Use when working in the Open Island repository and the user asks whether to create, audit, or apply Git tags, build checkpoint tags, release/version tags, tag policy, or tag cleanup. Enforces the project rule that feature branches and dev normally do not get tags; annotated build tags are considered only after integration into main when the change since the previous tag is a feature increment, important architecture/energy change, or intended distribution build; release tags require explicit user confirmation.
+description: Use when working in the Respect Island repository and the user asks whether to create, audit, or apply Git tags, build checkpoint tags, release/version tags, tag policy, or tag cleanup. Enforces the project rule that feature branches and dev normally do not get tags; annotated build tags are considered only after integration into main when the change since the previous tag is a feature increment, important architecture/energy change, or intended distribution build; release tags require explicit user confirmation.
 ---
 
-# Open Island Tag Checkpoint
+# Respect Island Tag Checkpoint
 
 ## Policy
 
-Use this skill for Open Island tag decisions. Treat tags as named integration points, not as routine development markers.
+Use this skill for Respect Island tag decisions. Treat tags as named integration points, not as routine development markers.
 
 - Feature branches: do not tag. Commit only.
 - `dev`: do not tag by default. Use commit hashes in summaries.

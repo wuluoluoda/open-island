@@ -27,6 +27,7 @@ final class AppModel {
     private static let completionReplyEnabledDefaultsKey = "feature.completionReply.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let codexRadarEnabledDefaultsKey = "feature.codex.radar.enabled"
+    private static let typeWhisperStatusEnabledDefaultsKey = "feature.typeWhisper.status.enabled"
     private static let energyProfileDefaultsKey = "app.energyProfile"
     private static let jumpTargetPrecisionProfileDefaultsKey = "app.energy.jumpTargetPrecisionProfile"
     private static let usageRefreshProfileDefaultsKey = "app.energy.usageRefreshProfile"
@@ -42,6 +43,11 @@ final class AppModel {
     private static let syntheticClaudeSessionPrefix = "claude-process:"
     private static let liveSessionStalenessWindow: TimeInterval = 15 * 60
     private static let jumpOverlayDismissLeadTime: Duration = .milliseconds(20)
+    private static let islandReminderInterval: Duration = .seconds(5 * 60)
+    private static let islandReminderDefaultRepeatCount = 3
+    private static let islandReminderRepeatCountRange = 1...12
+    private static let islandReminderEnabledDefaultsKey = "feature.islandReminder.enabled"
+    private static let islandReminderRepeatCountDefaultsKey = "feature.islandReminder.repeatCount"
 
     struct AcceptanceStep: Identifiable {
         let id: String
@@ -95,6 +101,7 @@ final class AppModel {
     let overlay = OverlayUICoordinator()
     let discovery = SessionDiscoveryCoordinator()
     let monitoring = ProcessMonitoringCoordinator()
+    let typeWhisperMonitor = TypeWhisperMonitor()
     let codexAppServer = CodexAppServerCoordinator()
     let updateChecker = UpdateChecker()
 
@@ -168,6 +175,21 @@ final class AppModel {
     var kimiHookStatusSummary: String { hooks.kimiHookStatusSummary }
     var codexHookStatusTitle: String { hooks.codexHookStatusTitle }
     var codexHookStatusSummary: String { hooks.codexHookStatusSummary }
+    var typeWhisperSnapshot: TypeWhisperSnapshot { typeWhisperMonitor.snapshot }
+    var isRefreshingTypeWhisperFootprint: Bool { typeWhisperMonitor.isRefreshingFootprint }
+    var typeWhisperStatusEnabled: Bool = true {
+        didSet {
+            guard hasFinishedInit, typeWhisperStatusEnabled != oldValue else { return }
+            UserDefaults.standard.set(typeWhisperStatusEnabled, forKey: Self.typeWhisperStatusEnabledDefaultsKey)
+            if typeWhisperStatusEnabled {
+                typeWhisperMonitor.startMonitoringIfNeeded()
+            } else {
+                typeWhisperMonitor.stopMonitoring(resetSnapshot: true)
+            }
+            refreshOverlayPlacementIfVisible()
+        }
+    }
+
     /// Mirrors `AgentIntentStore.firstLaunchCompleted`. Onboarding sets this
     /// to true after the user completes (or explicitly skips) the flow;
     /// legacy migration also flips it for users upgrading with existing
@@ -304,6 +326,27 @@ final class AppModel {
         didSet {
             guard hasFinishedInit, suppressFrontmostNotifications != oldValue else { return }
             UserDefaults.standard.set(suppressFrontmostNotifications, forKey: Self.suppressFrontmostNotificationsDefaultsKey)
+        }
+    }
+    var islandReminderEnabled: Bool = true {
+        didSet {
+            guard hasFinishedInit, islandReminderEnabled != oldValue else { return }
+            UserDefaults.standard.set(islandReminderEnabled, forKey: Self.islandReminderEnabledDefaultsKey)
+            if !islandReminderEnabled {
+                cancelIslandReminder()
+            }
+        }
+    }
+    var islandReminderRepeatCount: Int = 3 {
+        didSet {
+            let clamped = Self.clampedIslandReminderRepeatCount(islandReminderRepeatCount)
+            if clamped != islandReminderRepeatCount {
+                islandReminderRepeatCount = clamped
+                return
+            }
+
+            guard hasFinishedInit, islandReminderRepeatCount != oldValue else { return }
+            UserDefaults.standard.set(islandReminderRepeatCount, forKey: Self.islandReminderRepeatCountDefaultsKey)
         }
     }
     var codexStalledThresholdMinutes: Int = 12
@@ -647,6 +690,18 @@ final class AppModel {
     private var notificationPresentationTask: Task<Void, Never>?
 
     @ObservationIgnored
+    private var islandReminderTask: Task<Void, Never>?
+
+    @ObservationIgnored
+    private var islandReminderFireCount = 0
+
+    @ObservationIgnored
+    var islandReminderIntervalOverride: Duration?
+
+    @ObservationIgnored
+    var islandReminderRepeatCountOverride: Int?
+
+    @ObservationIgnored
     private var codexRolloutFallbackRefreshTask: Task<Void, Never>?
 
     @ObservationIgnored
@@ -660,7 +715,8 @@ final class AppModel {
             await ForegroundTerminalSessionProbe().matches(session: session)
         },
         codexShelfFileActions: CodexShelfFileActioning = WorkspaceCodexShelfFileActions(),
-        codexShelfEnabledOverride: Bool? = nil
+        codexShelfEnabledOverride: Bool? = nil,
+        islandReminderEnabledOverride: Bool? = nil
     ) {
         self.terminalJumpAction = terminalJumpAction
         self.isNotificationSessionAlreadyFrontmost = isNotificationSessionAlreadyFrontmost
@@ -670,7 +726,10 @@ final class AppModel {
             Self.hapticFeedbackEnabledDefaultsKey: false,
             Self.completionReplyEnabledDefaultsKey: false,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
+            Self.islandReminderEnabledDefaultsKey: true,
+            Self.islandReminderRepeatCountDefaultsKey: Self.islandReminderDefaultRepeatCount,
             Self.codexRadarEnabledDefaultsKey: true,
+            Self.typeWhisperStatusEnabledDefaultsKey: true,
             Self.energyProfileDefaultsKey: EnergyProfile.balanced.rawValue,
         ])
         isSoundMuted = UserDefaults.standard.bool(forKey: Self.soundMutedDefaultsKey)
@@ -678,6 +737,10 @@ final class AppModel {
         showDockIcon = UserDefaults.standard.bool(forKey: Self.showDockIconDefaultsKey)
         hapticFeedbackEnabled = UserDefaults.standard.bool(forKey: Self.hapticFeedbackEnabledDefaultsKey)
         suppressFrontmostNotifications = UserDefaults.standard.bool(forKey: Self.suppressFrontmostNotificationsDefaultsKey)
+        islandReminderEnabled = islandReminderEnabledOverride ?? UserDefaults.standard.bool(forKey: Self.islandReminderEnabledDefaultsKey)
+        islandReminderRepeatCount = Self.clampedIslandReminderRepeatCount(
+            UserDefaults.standard.integer(forKey: Self.islandReminderRepeatCountDefaultsKey)
+        )
         if UserDefaults.standard.object(forKey: Self.showCodexUsageDefaultsKey) != nil {
             showCodexUsage = UserDefaults.standard.bool(forKey: Self.showCodexUsageDefaultsKey)
         } else {
@@ -691,6 +754,7 @@ final class AppModel {
         codexLoopSuspectedThreshold = 4
         codexShelfEnabled = codexShelfEnabledOverride ?? false
         codexRadarEnabled = UserDefaults.standard.bool(forKey: Self.codexRadarEnabledDefaultsKey)
+        typeWhisperStatusEnabled = UserDefaults.standard.bool(forKey: Self.typeWhisperStatusEnabledDefaultsKey)
         energyProfile = EnergyProfile(
             rawValue: UserDefaults.standard.integer(forKey: Self.energyProfileDefaultsKey)
         ) ?? .balanced
@@ -838,6 +902,10 @@ final class AppModel {
                 minimumInterval: self.codexAppRediscoveryInterval
             )
         }
+        typeWhisperMonitor.onSnapshotChanged = { [weak self] in
+            self?.refreshOverlayPlacementIfVisible()
+        }
+
         refreshOverlayDisplayConfiguration()
         applyEnergySettings()
         hasFinishedInit = true
@@ -887,6 +955,7 @@ final class AppModel {
         monitoring.energyProfile = energyProfile
         monitoring.jumpTargetPrecisionProfile = jumpTargetPrecisionProfile
         monitoring.attachmentReconciliationProfile = attachmentReconciliationProfile
+        typeWhisperMonitor.energyProfile = energyProfile
         hooks.configureUsageRefreshMonitoring(
             profile: usageRefreshProfile,
             includeCodex: showCodexUsage
@@ -1212,6 +1281,10 @@ final class AppModel {
             hooks.refreshOpenCodePluginStatus()
             hooks.refreshCursorHookStatus()
             updateChecker.startIfNeeded()
+            if typeWhisperStatusEnabled {
+                typeWhisperMonitor.startMonitoringIfNeeded()
+            }
+
         } else {
             isResolvingInitialLiveSessions = false
         }
@@ -1363,6 +1436,9 @@ final class AppModel {
     private func playNotificationSound() {
         overlay.playNotificationSound()
     }
+    private func playIslandReminderSound() {
+        overlay.playIslandReminderSound()
+    }
     private func presentNotificationSurface(_ surface: IslandSurface, playSound: Bool = true) {
         overlay.presentNotificationSurface(surface, playSound: playSound)
         prewarmJumpTargets(for: surface.sessionID)
@@ -1399,7 +1475,7 @@ final class AppModel {
             // the `CommandGroup(.appSettings)` button that opens the window.
             NSApp.sendAction(NSSelectorFromString("showSettingsWindow:"), to: nil, from: nil)
         }
-        if let window = NSApp.windows.first(where: { $0.title == "Open Island Settings" }) {
+        if let window = NSApp.windows.first(where: { $0.title == "Respect Island Settings" }) {
             window.orderFrontRegardless()
             window.makeKey()
         }
@@ -1417,6 +1493,11 @@ final class AppModel {
 
     func toggleSoundMuted() {
         isSoundMuted.toggle()
+    }
+
+    func refreshTypeWhisperFootprint() {
+        guard typeWhisperStatusEnabled else { return }
+        typeWhisperMonitor.refreshFootprintNow()
     }
 
     func approveFocusedPermission(_ approved: Bool) {
@@ -1621,7 +1702,7 @@ final class AppModel {
 
         switch action {
         case .deny:
-            resolution = .deny(message: "Permission denied in Open Island.", interrupt: false)
+            resolution = .deny(message: "Permission denied in Respect Island.", interrupt: false)
             message = "Denying permission for \(session.title)."
         case .allowOnce:
             resolution = .allowOnce()
@@ -1723,7 +1804,7 @@ final class AppModel {
             return .allowOnce()
         }
 
-        return .deny(message: "Permission denied in Open Island.", interrupt: false)
+        return .deny(message: "Permission denied in Respect Island.", interrupt: false)
     }
 
     func applyTrackedEvent(
@@ -1780,6 +1861,7 @@ final class AppModel {
                     stateChanged: true
                 )
             )
+            resetIslandReminderIfNeeded(for: event)
         }
 
         // Push relevant events to the Watch/iPhone via the relay
@@ -2003,6 +2085,84 @@ final class AppModel {
             }
 
             self.presentNotificationSurface(surface, playSound: false)
+        }
+    }
+
+    private var activeIslandReminderInterval: Duration {
+        islandReminderIntervalOverride ?? Self.islandReminderInterval
+    }
+
+    private var activeIslandReminderRepeatCount: Int {
+        islandReminderRepeatCountOverride ?? islandReminderRepeatCount
+    }
+
+    private func resetIslandReminderIfNeeded(for event: AgentEvent) {
+        guard Self.shouldResetIslandReminder(for: event),
+              islandReminderEnabled,
+              activeIslandReminderRepeatCount > 0 else {
+            return
+        }
+
+        islandReminderFireCount = 0
+        guard islandReminderTask == nil else {
+            return
+        }
+
+        islandReminderTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: self.activeIslandReminderInterval)
+                } catch {
+                    return
+                }
+
+                guard self.islandReminderCanFire else {
+                    self.islandReminderTask = nil
+                    return
+                }
+
+                self.islandReminderFireCount += 1
+                self.playIslandReminderSound()
+                self.notchOpen(reason: .click)
+
+                if self.islandReminderFireCount >= self.activeIslandReminderRepeatCount {
+                    self.islandReminderTask = nil
+                    return
+                }
+            }
+        }
+    }
+
+    private var islandReminderCanFire: Bool {
+        islandReminderEnabled && islandReminderFireCount < activeIslandReminderRepeatCount
+    }
+
+    private func cancelIslandReminder() {
+        islandReminderTask?.cancel()
+        islandReminderTask = nil
+        islandReminderFireCount = 0
+    }
+
+    private static func clampedIslandReminderRepeatCount(_ value: Int) -> Int {
+        min(max(value, islandReminderRepeatCountRange.lowerBound), islandReminderRepeatCountRange.upperBound)
+    }
+
+    nonisolated private static func shouldResetIslandReminder(for event: AgentEvent) -> Bool {
+        switch event {
+        case .sessionStarted, .activityUpdated, .permissionRequested, .questionAsked, .sessionCompleted:
+            return true
+        case .jumpTargetUpdated,
+             .sessionMetadataUpdated,
+             .claudeSessionMetadataUpdated,
+             .geminiSessionMetadataUpdated,
+             .openCodeSessionMetadataUpdated,
+             .cursorSessionMetadataUpdated,
+             .actionableStateResolved:
+            return false
         }
     }
 

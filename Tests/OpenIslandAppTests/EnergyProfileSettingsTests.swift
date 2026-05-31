@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import OpenIslandApp
+import OpenIslandCore
 
 struct EnergyProfileSettingsTests {
     @Test
@@ -34,5 +35,35 @@ struct EnergyProfileSettingsTests {
         #expect(HookInstallationCoordinator.usageRefreshInterval(for: .quiet) == nil)
         #expect(HookInstallationCoordinator.usageRefreshInterval(for: .balanced) == balancedInterval)
         #expect(HookInstallationCoordinator.usageRefreshInterval(for: .responsive) == responsiveInterval)
+    }
+
+    @MainActor
+    @Test
+    func codexUsageSummaryReportsRemainingPercentages() {
+        let coordinator = HookInstallationCoordinator()
+        coordinator.codexUsageSnapshot = CodexUsageSnapshot(
+            sourceFilePath: "/tmp/rollout.jsonl",
+            capturedAt: nil,
+            windows: [
+                CodexUsageWindow(
+                    key: "primary",
+                    label: "5h",
+                    usedPercentage: 27,
+                    leftPercentage: 73,
+                    windowMinutes: 300,
+                    resetsAt: nil
+                ),
+                CodexUsageWindow(
+                    key: "secondary",
+                    label: "1w",
+                    usedPercentage: 95,
+                    leftPercentage: 5,
+                    windowMinutes: 10_080,
+                    resetsAt: nil
+                ),
+            ]
+        )
+
+        #expect(coordinator.codexUsageSummaryText == "5h 73% left · 1w 5% left")
     }
 }

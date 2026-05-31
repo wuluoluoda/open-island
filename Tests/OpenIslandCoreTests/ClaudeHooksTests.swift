@@ -155,6 +155,27 @@ struct ClaudeHooksTests {
     }
 
     @Test
+    func claudeDesktopBundleIDClassifiesHookAsClaudeAppBeforeLeakedTerminal() {
+        let payload = ClaudeHookPayload(
+            cwd: "/tmp/worktree",
+            hookEventName: .userPromptSubmit,
+            sessionID: "desktop-session"
+        ).withRuntimeContext(
+            environment: [
+                "__CFBundleIdentifier": "com.anthropic.claudefordesktop",
+                "TERM_PROGRAM": "ghostty",
+            ],
+            currentTTYProvider: { nil },
+            terminalLocatorProvider: { _ in (sessionID: "wrong-terminal", tty: nil, title: nil) },
+            warpPaneResolver: { _ in nil }
+        )
+
+        #expect(payload.terminalApp == "Claude.app")
+        #expect(payload.defaultJumpTarget.terminalApp == "Claude.app")
+        #expect(payload.terminalSessionID == nil)
+    }
+
+    @Test
     func claudeInferTerminalAppRecognizesWarpViaEnvVar() {
         let payload = ClaudeHookPayload(
             cwd: "/tmp/demo", hookEventName: .sessionStart, sessionID: "s1"

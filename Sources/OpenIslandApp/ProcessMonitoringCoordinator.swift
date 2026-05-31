@@ -485,9 +485,21 @@ final class ProcessMonitoringCoordinator {
             }
         }
 
-        // Claude sessions: reuse the multi-pass matching from representedClaudeProcessKeys.
+        // Claude Desktop Code tab sessions: keep alive while Claude.app is running.
+        let isClaudeDesktopAppRunning = Self.isClaudeDesktopAppRunning()
+        for session in sessions where session.tool == .claudeCode && !session.isDemoSession {
+            if session.isClaudeDesktopAppSession, isClaudeDesktopAppRunning {
+                aliveIDs.insert(session.id)
+            }
+        }
+
+        // Claude CLI sessions: reuse the multi-pass matching from representedClaudeProcessKeys.
         let claudeProcesses = activeProcesses.filter { $0.tool == .claudeCode }
-        let trackedClaudeSessions = sessions.filter { $0.tool == .claudeCode && !isSyntheticClaudeSession($0) }
+        let trackedClaudeSessions = sessions.filter {
+            $0.tool == .claudeCode
+                && !$0.isClaudeDesktopAppSession
+                && !isSyntheticClaudeSession($0)
+        }
         var claimedSessionIDs: Set<String> = []
 
         // Pass 1: exact session ID match.
@@ -577,7 +589,7 @@ final class ProcessMonitoringCoordinator {
             claimedGeminiSessionIDs.insert(matched.id)
         }
 
-        // Kimi sessions are hook-managed and use UUIDs that Open Island cannot
+        // Kimi sessions are hook-managed and use UUIDs that Respect Island cannot
         // recover from ps/lsof. As long as any kimi process exists, keep every
         // tracked Kimi session alive so Stop/completed sessions don't get
         // evicted by the hook-managed liveness fallback in
@@ -1071,11 +1083,17 @@ final class ProcessMonitoringCoordinator {
     /// `NSRunningApplication.runningApplications(withBundleIdentifier:)`
     /// has been observed to intermittently return an empty array even
     /// when the app is running (likely a brief indexing window after
-    /// app launch / conversation switch), which would cause Open Island
+    /// app launch / conversation switch), which would cause Respect Island
     /// to incorrectly kill visible Codex sessions.
     static func isCodexDesktopAppRunning() -> Bool {
         NSWorkspace.shared.runningApplications.contains { app in
             app.bundleIdentifier == "com.openai.codex"
+        }
+    }
+
+    static func isClaudeDesktopAppRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains { app in
+            app.bundleIdentifier == "com.anthropic.claudefordesktop"
         }
     }
 

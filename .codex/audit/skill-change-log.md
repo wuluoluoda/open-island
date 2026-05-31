@@ -115,6 +115,20 @@
 - Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
 - Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
 - Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
+
+#### 2026-05-26T19:54:45+08:00 Respect Island local naming cleanup
+
+- Kind: skill
+- Scope: project
+- Skill: dev-main-release, open-island-agent-reuse, open-island-dev-worktree-cleanup, open-island-tag-checkpoint, open-island-workflow
+- Entry ID: 20260526195445-respect-island-local-naming-cleanup
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: AGENTS.md,CLAUDE.md,.codex/skills/dev-main-release/SKILL.md,.codex/skills/open-island-agent-reuse/SKILL.md,.codex/skills/open-island-dev-worktree-cleanup/SKILL.md,.codex/skills/open-island-tag-checkpoint/SKILL.md,.codex/skills/open-island-tag-checkpoint/agents/openai.yaml,.codex/skills/open-island-workflow/SKILL.md
+- Summary: Updated local workflow docs and project skill copy from Open Island naming to Respect Island after the app rename.
+- Reason: The product and dev app were renamed, but local guidance and project skills still referenced the old visible name.
+- Verification: rg found no remaining Open Island Dev/Open Island visible-name matches in checked local docs, scripts, sources, and project skills; old ~/Applications/Open Island Dev.app was removed.
+- Rollback: Revert the naming-cleanup commit to restore the previous local guidance and project skill copy.
+
 ## Skill: dev-main-release
 
 - Scope: project
@@ -139,6 +153,19 @@
 - Reason: User objected that Codex committed directly to dev without an explicit commit request and asked whether promote should be changed to prevent self-commits.
 - Verification: Reviewed open-island-workflow and dev-main-release skills; changes are currently uncommitted pending user confirmation.
 - Rollback: Revert or discard the two SKILL.md edits if the stricter commit-authorization policy is not desired.
+
+#### 2026-05-26T19:54:45+08:00 Respect Island local naming cleanup
+
+- Kind: skill
+- Scope: project
+- Skill: dev-main-release, open-island-agent-reuse, open-island-dev-worktree-cleanup, open-island-tag-checkpoint, open-island-workflow
+- Entry ID: 20260526195445-respect-island-local-naming-cleanup
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: AGENTS.md,CLAUDE.md,.codex/skills/dev-main-release/SKILL.md,.codex/skills/open-island-agent-reuse/SKILL.md,.codex/skills/open-island-dev-worktree-cleanup/SKILL.md,.codex/skills/open-island-tag-checkpoint/SKILL.md,.codex/skills/open-island-tag-checkpoint/agents/openai.yaml,.codex/skills/open-island-workflow/SKILL.md
+- Summary: Updated local workflow docs and project skill copy from Open Island naming to Respect Island after the app rename.
+- Reason: The product and dev app were renamed, but local guidance and project skills still referenced the old visible name.
+- Verification: rg found no remaining Open Island Dev/Open Island visible-name matches in checked local docs, scripts, sources, and project skills; old ~/Applications/Open Island Dev.app was removed.
+- Rollback: Revert the naming-cleanup commit to restore the previous local guidance and project skill copy.
 
 ## Skill: open-island-agent-reuse
 
@@ -167,6 +194,19 @@
 - Verification: Manual frontmatter sanity check passed; quick_validate.py could not run because PyYAML is unavailable in the local Python environment.
 - Rollback: Remove .codex/skills/open-island-agent-reuse/SKILL.md and the matching audit entry if the skill is no longer wanted.
 
+#### 2026-05-26T19:54:45+08:00 Respect Island local naming cleanup
+
+- Kind: skill
+- Scope: project
+- Skill: dev-main-release, open-island-agent-reuse, open-island-dev-worktree-cleanup, open-island-tag-checkpoint, open-island-workflow
+- Entry ID: 20260526195445-respect-island-local-naming-cleanup
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: AGENTS.md,CLAUDE.md,.codex/skills/dev-main-release/SKILL.md,.codex/skills/open-island-agent-reuse/SKILL.md,.codex/skills/open-island-dev-worktree-cleanup/SKILL.md,.codex/skills/open-island-tag-checkpoint/SKILL.md,.codex/skills/open-island-tag-checkpoint/agents/openai.yaml,.codex/skills/open-island-workflow/SKILL.md
+- Summary: Updated local workflow docs and project skill copy from Open Island naming to Respect Island after the app rename.
+- Reason: The product and dev app were renamed, but local guidance and project skills still referenced the old visible name.
+- Verification: rg found no remaining Open Island Dev/Open Island visible-name matches in checked local docs, scripts, sources, and project skills; old ~/Applications/Open Island Dev.app was removed.
+- Rollback: Revert the naming-cleanup commit to restore the previous local guidance and project skill copy.
+
 ## Skill: open-island-dev-worktree-cleanup
 
 - Scope: project
@@ -191,3 +231,41 @@
 - Reason: Ensure worktrees opened from dev are not left behind after their branch is integrated, while preserving the default branch-in-current-checkout workflow.
 - Verification: Ran quick_validate.py via uv --with pyyaml for open-island-dev-worktree-cleanup and open-island-workflow; ran git diff --check.
 - Rollback: Revert the new open-island-dev-worktree-cleanup skill and restore the previous open-island-workflow wording.
+
+#### 2026-05-26T19:54:45+08:00 Respect Island local naming cleanup
+
+- Kind: skill
+- Scope: project
+- Skill: dev-main-release, open-island-agent-reuse, open-island-dev-worktree-cleanup, open-island-tag-checkpoint, open-island-workflow
+- Entry ID: 20260526195445-respect-island-local-naming-cleanup
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: AGENTS.md,CLAUDE.md,.codex/skills/dev-main-release/SKILL.md,.codex/skills/open-island-agent-reuse/SKILL.md,.codex/skills/open-island-dev-worktree-cleanup/SKILL.md,.codex/skills/open-island-tag-checkpoint/SKILL.md,.codex/skills/open-island-tag-checkpoint/agents/openai.yaml,.codex/skills/open-island-workflow/SKILL.md
+- Summary: Updated local workflow docs and project skill copy from Open Island naming to Respect Island after the app rename.
+- Reason: The product and dev app were renamed, but local guidance and project skills still referenced the old visible name.
+- Verification: rg found no remaining Open Island Dev/Open Island visible-name matches in checked local docs, scripts, sources, and project skills; old ~/Applications/Open Island Dev.app was removed.
+- Rollback: Revert the naming-cleanup commit to restore the previous local guidance and project skill copy.
+
+## Skill: open-island-tag-checkpoint
+
+- Scope: project
+- Project path: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Current skill name: open-island-tag-checkpoint
+- Name history:
+  - open-island-tag-checkpoint (observed by codex-audit-log)
+- Lifecycle history:
+  - active (observed by codex-audit-log)
+
+### Entries
+
+#### 2026-05-26T19:54:45+08:00 Respect Island local naming cleanup
+
+- Kind: skill
+- Scope: project
+- Skill: dev-main-release, open-island-agent-reuse, open-island-dev-worktree-cleanup, open-island-tag-checkpoint, open-island-workflow
+- Entry ID: 20260526195445-respect-island-local-naming-cleanup
+- Project: /Users/wuluoluo/work/code.app.org/open-vibe-island
+- Files: AGENTS.md,CLAUDE.md,.codex/skills/dev-main-release/SKILL.md,.codex/skills/open-island-agent-reuse/SKILL.md,.codex/skills/open-island-dev-worktree-cleanup/SKILL.md,.codex/skills/open-island-tag-checkpoint/SKILL.md,.codex/skills/open-island-tag-checkpoint/agents/openai.yaml,.codex/skills/open-island-workflow/SKILL.md
+- Summary: Updated local workflow docs and project skill copy from Open Island naming to Respect Island after the app rename.
+- Reason: The product and dev app were renamed, but local guidance and project skills still referenced the old visible name.
+- Verification: rg found no remaining Open Island Dev/Open Island visible-name matches in checked local docs, scripts, sources, and project skills; old ~/Applications/Open Island Dev.app was removed.
+- Rollback: Revert the naming-cleanup commit to restore the previous local guidance and project skill copy.

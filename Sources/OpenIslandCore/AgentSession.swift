@@ -387,6 +387,12 @@ public struct AgentSession: Equatable, Identifiable, Codable, Sendable {
     /// matching individual CLI subprocess PIDs.
     public var isCodexAppSession: Bool = false
 
+    /// Whether this Claude Code session originates from Claude Desktop's
+    /// Code tab rather than the Claude Code CLI. When `true`, liveness is
+    /// determined by whether Claude.app is running, not by matching a CLI
+    /// process that may not exist after the hook exits.
+    public var isClaudeDesktopAppSession: Bool = false
+
     /// Whether the agent session has ended (received `SessionEnd` hook).
     /// Only meaningful for hook-managed sessions.
     public var isSessionEnded: Bool = false
@@ -541,6 +547,9 @@ public extension AgentSession {
         // be hook-managed (when both hook and rediscovery converge on it).
         if isCodexAppSession {
             if isExpiredEmptyCodexAppShell(at: referenceDate) { return false }
+            return isProcessAlive
+        }
+        if isClaudeDesktopAppSession {
             return isProcessAlive
         }
         if isHookManaged { return !isSessionEnded }

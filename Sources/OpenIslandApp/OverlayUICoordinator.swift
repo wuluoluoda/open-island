@@ -45,6 +45,11 @@ final class OverlayUICoordinator {
     }
 
     @ObservationIgnored
+    var islandReminderSoundPlayer: (Bool) -> Void = { isMuted in
+        NotificationSoundService.playIslandReminder(isMuted: isMuted)
+    }
+
+    @ObservationIgnored
     var ignoresPointerExitAccessor: (() -> Bool)?
 
     @ObservationIgnored
@@ -316,6 +321,10 @@ final class OverlayUICoordinator {
 
     func playNotificationSound() {
         notificationSoundPlayer(isSoundMuted)
+    }
+
+    func playIslandReminderSound() {
+        islandReminderSoundPlayer(isSoundMuted)
     }
 
     func presentNotificationSurface(_ surface: IslandSurface, playSound: Bool = true) {

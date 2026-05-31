@@ -48,7 +48,7 @@ public struct ClaudeTrackedSessionRecord: Equatable, Codable, Sendable {
     }
 
     public var session: AgentSession {
-        AgentSession(
+        var session = AgentSession(
             id: sessionID,
             title: title,
             tool: .claudeCode,
@@ -60,6 +60,9 @@ public struct ClaudeTrackedSessionRecord: Equatable, Codable, Sendable {
             jumpTarget: jumpTarget,
             claudeMetadata: claudeMetadata
         )
+        session.isClaudeDesktopAppSession = jumpTarget?.terminalApp == "Claude.app"
+        session.isHookManaged = origin == .live && !session.isClaudeDesktopAppSession
+        return session
     }
 
     public var restorableSession: AgentSession {

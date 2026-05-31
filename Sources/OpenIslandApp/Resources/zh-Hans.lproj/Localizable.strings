@@ -1,6 +1,6 @@
 /* Common */
-"app.name" = "Open Island";
-"app.name.oss" = "Open Island OSS";
+"app.name" = "Respect Island";
+"app.name.oss" = "Respect Island OSS";
 "app.description" = "macOS AI 编程代理伴侣";
 
 /* Settings - Tab Labels */
@@ -25,8 +25,30 @@
 "settings.general.autoHideNoSessions" = "无活跃会话时自动隐藏";
 "settings.general.autoCollapse" = "鼠标离开时自动收起";
 "settings.general.showDockIcon" = "在 Dock 中显示图标";
+"settings.general.typeWhisperStatus" = "显示 TypeWhisper 状态";
+"settings.general.typeWhisperStatus.help" = "当前仅适配 qwen3-asr-1.7b-6bit，后续会继续拓展更多模型。";
+"settings.general.typeWhisper.section" = "TypeWhisper";
+"settings.general.typeWhisper.status" = "状态";
+"settings.general.typeWhisper.engine" = "引擎";
+"settings.general.typeWhisper.model" = "模型";
+"settings.general.typeWhisper.apiServer" = "API Server";
+"settings.general.typeWhisper.autoUnload" = "自动卸载";
+"settings.general.typeWhisper.memory" = "内存";
+"settings.general.typeWhisper.polling" = "轮询";
+"settings.general.typeWhisper.pollingValue" = "plist/进程 30-60 秒 · 内存 5-10 分钟/手动";
+"settings.general.typeWhisper.refreshMemory" = "刷新内存";
+"settings.general.typeWhisper.on" = "开启";
+"settings.general.typeWhisper.off" = "关闭";
+"settings.general.typeWhisper.disabled" = "已停用";
+"settings.general.typeWhisper.notRunning" = "未运行";
+"settings.general.typeWhisper.unloaded" = "模型已卸载";
+"settings.general.typeWhisper.loaded" = "模型已加载";
+"settings.general.typeWhisper.refreshing" = "正在刷新...";
+"settings.general.typeWhisper.manualRefresh" = "手动刷新";
 "settings.general.hapticFeedback" = "悬停时震动反馈";
 "settings.general.suppressFrontmostNotifications" = "前台会话不弹出通知";
+"settings.general.islandReminder" = "主动展开灵动岛提醒";
+"settings.general.islandReminderRepeatCount" = "额外提醒次数：%d";
 "settings.general.showCodexUsage" = "显示 Codex 用量";
 "settings.general.completionReply" = "在完成卡片中回复";
 "settings.general.cliHooks" = "CLI Hooks";
@@ -35,8 +57,8 @@
 "settings.general.uninstall" = "卸载";
 "settings.general.uninstallConfirmTitle" = "确认卸载 Hooks？";
 "settings.general.uninstallConfirmAction" = "卸载";
-"settings.general.uninstallConfirmMessage.claude" = "这将从 Claude Code 中移除 Open Island 的 hooks。你可以随时重新安装。";
-"settings.general.uninstallConfirmMessage.codex" = "这将从 Codex 中移除 Open Island 的 hooks。你可以随时重新安装。";
+"settings.general.uninstallConfirmMessage.claude" = "这将从 Claude Code 中移除 Respect Island 的 hooks。你可以随时重新安装。";
+"settings.general.uninstallConfirmMessage.codex" = "这将从 Codex 中移除 Respect Island 的 hooks。你可以随时重新安装。";
 "settings.general.uninstallConfirmMessage.claudeUsage" = "这将移除 Claude 用量桥接。你可以随时重新安装。";
 "settings.general.cancel" = "取消";
 "settings.general.language" = "语言";
@@ -129,10 +151,10 @@
 "setup.usageBridgeDesc" = "在本地追踪 Claude API 用量";
 "setup.optional" = "可选";
 "setup.permissionsTitle" = "辅助功能";
-"setup.permissionsDesc" = "Open Island 可能需要辅助功能权限来检测终端窗口。请在「系统设置 → 隐私与安全性 → 辅助功能」中授权。";
+"setup.permissionsDesc" = "Respect Island 可能需要辅助功能权限来检测终端窗口。请在「系统设置 → 隐私与安全性 → 辅助功能」中授权。";
 "setup.installAll" = "全部安装";
-"setup.banner.noHooks.title" = "开始使用 Open Island";
-"setup.banner.noHooks.message" = "在下方为你使用的 Agent 安装 hook，Open Island 就会开始监听对应会话。";
+"setup.banner.noHooks.title" = "开始使用 Respect Island";
+"setup.banner.noHooks.message" = "在下方为你使用的 Agent 安装 hook，Respect Island 就会开始监听对应会话。";
 "setup.revealConfigLocation" = "在 Finder 中显示配置";
 "setup.section.diagnostics" = "Hooks 诊断";
 "setup.diagnostics.notRun" = "尚未运行健康检查。";
@@ -148,8 +170,8 @@
 /* Settings - About */
 "settings.about.version" = "版本 %@";
 "settings.about.checkForUpdates" = "检查更新…";
-"settings.about.quitApp" = "退出 Open Island";
-"island.quit.confirmTitle" = "退出 Open Island？";
+"settings.about.quitApp" = "退出 Respect Island";
+"island.quit.confirmTitle" = "退出 Respect Island？";
 "island.quit.confirmAction" = "退出";
 "island.quit.confirmMessage" = "确定要退出吗？";
 
@@ -158,7 +180,7 @@
 
 /* Island Panel - Bootstrap */
 "island.checkingTerminals" = "正在检查打开的终端会话";
-"island.terminalOwnership" = "Open Island 将在确认终端归属后显示实时代理";
+"island.terminalOwnership" = "Respect Island 将在确认终端归属后显示实时代理";
 "island.noTerminals" = "没有打开的终端会话";
 "island.startAgent" = "在终端中启动编码代理";
 "island.recentSessions" = "最近的会话将保留在这里，直到终端重新打开";
@@ -186,4 +208,4 @@
 "completion.replyPlaceholder" = "回复 Claude…";
 
 /* Window Titles */
-"window.settings" = "Open Island 设置";
+"window.settings" = "Respect Island 设置";
